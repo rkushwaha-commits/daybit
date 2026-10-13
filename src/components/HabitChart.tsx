@@ -31,9 +31,9 @@ interface HabitChartProps {
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string | number }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-lg text-xs">
-        <p className="font-semibold text-slate-700 mb-0.5">Day {label}</p>
-        <p className="text-emerald-600 font-bold">{payload[0].value}% completed</p>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 shadow-lg text-xs">
+        <p className="font-semibold text-slate-700 dark:text-slate-200 mb-0.5">Day {label}</p>
+        <p className="text-emerald-600 dark:text-emerald-400 font-bold">{payload[0].value}% completed</p>
       </div>
     );
   }
@@ -88,56 +88,58 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
   return (
     <div className="space-y-5">
       {/* ── Summary pills ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-emerald-300 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-emerald-300 dark:hover:border-emerald-500 transition-all duration-200 ease-in-out shadow-xs">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-transparent dark:border-emerald-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
+            <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Overall Rate</p>
-            <p className="text-xl font-bold text-slate-800">{overallRate}%</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Overall Rate</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{overallRate}%</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-amber-300 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <Flame className="w-4 h-4 text-amber-500" />
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-amber-300 dark:hover:border-amber-500 transition-all duration-200 ease-in-out shadow-xs">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/70 border border-transparent dark:border-amber-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
+            <Flame className="w-5 h-5 text-amber-500 dark:text-amber-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-slate-500">Best Habit</p>
-            <p className="text-sm font-bold text-slate-800 leading-tight truncate" title={bestHabit ? `${bestHabit.emoji} ${bestHabit.name}` : ''}>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Best Habit</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate" title={bestHabit ? `${bestHabit.emoji} ${bestHabit.name}` : ''}>
               {bestHabit ? `${bestHabit.emoji} ${bestHabit.name}` : '—'}
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-indigo-300 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <BarChart2 className="w-4 h-4 text-indigo-500" />
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 ease-in-out shadow-xs">
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 border border-transparent dark:border-indigo-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
+            <BarChart2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </div>
           <div>
-            <p className="text-xs text-slate-500">Total Check-ins</p>
-            <p className="text-xl font-bold text-slate-800">{totalCompleted}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Check-ins</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalCompleted}</p>
           </div>
         </div>
       </div>
 
       {/* ── Daily Completion Line Chart ───────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs transition-all duration-200 ease-in-out">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs transition-colors duration-200 ease-in-out">
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-4 h-4 text-emerald-600" />
-          <h2 className="text-sm font-semibold text-slate-700">Daily Completion Rate</h2>
-          <span className="ml-auto text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+          <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white">Daily Completion Rate</h2>
+          <span className="ml-auto text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
             % of habits done each day
           </span>
         </div>
         <div style={{ height: 220 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-800" />
               <XAxis
                 dataKey="day"
                 tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
+                axisLine={{ stroke: '#cbd5e1' }}
               />
               <YAxis
                 domain={[0, 100]}
@@ -161,11 +163,11 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
       </div>
 
       {/* ── Per-Habit Completions Bar Chart ───────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs transition-all duration-200 ease-in-out">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs transition-colors duration-200 ease-in-out">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-4 h-4 text-indigo-500" />
-          <h2 className="text-sm font-semibold text-slate-700">Habit Completions This Month</h2>
-          <span className="ml-auto text-xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+          <BarChart2 className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white">Habit Completions This Month</h2>
+          <span className="ml-auto text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
             by habit
           </span>
         </div>
@@ -177,12 +179,12 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
               margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
               barSize={16}
             >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
               <XAxis
                 type="number"
                 tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
+                axisLine={{ stroke: '#cbd5e1' }}
               />
               <YAxis
                 type="category"
@@ -194,9 +196,10 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
               />
               <Tooltip
                 formatter={(value: number) => [value, 'Days completed']}
-                cursor={{ fill: 'rgba(99,102,241,0.04)' }}
+                cursor={{ fill: 'rgba(99,102,241,0.06)' }}
                 contentStyle={{
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'var(--tooltip-bg, #ffffff)',
+                  border: '1px solid #cbd5e1',
                   borderRadius: 8,
                   fontSize: 12,
                 }}
@@ -213,9 +216,9 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
           </ResponsiveContainer>
         </div>
         {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100">
+        <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
           {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
-            <span key={cat} className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span key={cat} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
               {cat}
             </span>

@@ -66,23 +66,23 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-200 ease-in-out animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-modal-in transition-all duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-200 ease-in-out animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden animate-modal-in transition-all duration-200">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
           <div className="flex items-center space-x-2.5">
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center transition-transform duration-200 hover:scale-105">
+            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center transition-transform duration-200 hover:scale-105">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Add New Habit</h3>
-              <p className="text-xs text-slate-500">Track a new daily routine in your spreadsheet</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Add New Habit</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Track a new daily routine in your spreadsheet</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 active:scale-90 transition-all duration-200 ease-in-out"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-90 transition-all duration-200 ease-in-out"
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,7 +93,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
           
           {/* Habit Name */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
               Habit Name *
             </label>
             <input
@@ -102,7 +102,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
               placeholder="e.g. Read 20 mins, Cold Shower, No Sugar"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all duration-200 ease-in-out"
+              className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-all duration-200 ease-in-out"
             />
           </div>
 
@@ -110,13 +110,13 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             {/* Category */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
                 Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as HabitCategory)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
+                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -128,7 +128,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
 
             {/* Target Days Per Month */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
                 Monthly Target (Days)
               </label>
               <input
@@ -137,17 +137,17 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
                 max={daysInMonth}
                 value={targetPerMonth}
                 onChange={(e) => setTargetPerMonth(Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out font-mono"
+                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out font-mono"
               />
             </div>
           </div>
 
           {/* Emoji Picker Swatches */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
               Choose Icon / Emoji
             </label>
-            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
               {EMOJI_OPTIONS.map((e) => (
                 <button
                   type="button"
@@ -155,8 +155,8 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
                   onClick={() => setEmoji(e)}
                   className={`w-8 h-8 rounded-md flex items-center justify-center text-lg transition-all duration-200 ease-in-out active:scale-90 ${
                     emoji === e
-                      ? 'bg-white shadow-sm ring-2 ring-emerald-500 scale-110'
-                      : 'hover:bg-slate-200/60 hover:scale-105'
+                      ? 'bg-white dark:bg-slate-700 shadow-sm ring-2 ring-emerald-500 scale-110'
+                      : 'hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:scale-105'
                   }`}
                 >
                   {e}
@@ -167,7 +167,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
 
           {/* Color Palette */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
               Accent Color
             </label>
             <div className="flex items-center space-x-2">
@@ -178,7 +178,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
                   onClick={() => setColor(c.hex)}
                   title={c.name}
                   className={`w-6 h-6 rounded-full transition-transform duration-200 ease-in-out active:scale-90 ${
-                    color === c.hex ? 'ring-2 ring-offset-2 ring-slate-800 scale-110' : 'hover:scale-110'
+                    color === c.hex ? 'ring-2 ring-offset-2 ring-slate-800 dark:ring-white dark:ring-offset-slate-900 scale-110' : 'hover:scale-110'
                   }`}
                   style={{ backgroundColor: c.hex }}
                 />
@@ -188,7 +188,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
 
           {/* Optional Notes */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
               Notes / Why it matters (Optional)
             </label>
             <input
@@ -196,16 +196,16 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
               placeholder="e.g. Build discipline before starting my work"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
+              className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
             />
           </div>
 
           {/* Form Actions */}
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-end space-x-2.5">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 active:scale-95 rounded-lg transition-all duration-200 ease-in-out"
+              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-200 ease-in-out"
             >
               Cancel
             </button>

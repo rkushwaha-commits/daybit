@@ -8,10 +8,13 @@ import { HabitStats } from './components/HabitStats';
 import { HabitGrid } from './components/HabitGrid';
 import { AddHabitModal } from './components/AddHabitModal';
 import { AuthModal } from './components/AuthModal';
+import { AvatarPickerModal } from './components/AvatarPickerModal';
+import { DEFAULT_AVATAR_ID } from './data/avatars';
 import GreetingBanner from './components/GreetingBanner';
 import { Sparkles, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import HabitChart from './components/HabitChart';
 import { User } from '@supabase/supabase-js';
+import { useTheme } from './hooks/useTheme';
 import {
   supabase,
   signOut,
@@ -22,12 +25,26 @@ import {
 } from './lib/supabase';
 
 const LOCAL_STORAGE_KEY = 'habitflow_habits_v1';
+const AVATAR_STORAGE_KEY = 'habitflow_avatar_id_v1';
 
 export default function App() {
+  // ── Theme State ──
+  const { theme, toggleTheme } = useTheme();
+
   // ── Authentication & Cloud Sync States ──
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [avatarId, setAvatarId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
+      if (saved) return saved;
+    } catch {
+      // fallback
+    }
+    return DEFAULT_AVATAR_ID;
+  });
 
   // ── Current real date — synced to today and auto-refreshed at midnight ──
   const [todayDate, setTodayDate] = useState<Date>(() => {
@@ -272,6 +289,15 @@ export default function App() {
     }
   };
 
+  const handleSelectAvatar = (newAvatarId: string) => {
+    setAvatarId(newAvatarId);
+    try {
+      localStorage.setItem(AVATAR_STORAGE_KEY, newAvatarId);
+    } catch (e) {
+      console.warn('Failed to save avatar ID to localStorage:', e);
+    }
+  };
+
   const handlePrevMonth = () => {
     setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -287,7 +313,7 @@ export default function App() {
   const monthName = getMonthName(currentDate.getMonth());
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-800">
+    <div className="min-h-screen bg-transparent flex flex-col text-slate-800 dark:text-slate-100">
       {/* Top Application Header */}
       <Header
         searchQuery={searchQuery}
@@ -302,6 +328,10 @@ export default function App() {
         isSyncing={isSyncing}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onSignOut={handleSignOut}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        selectedAvatarId={avatarId}
+        onOpenAvatarPicker={() => setIsAvatarPickerOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -335,19 +365,19 @@ export default function App() {
         <HabitChart days={days} habits={filteredHabits} />
 
         {/* Pro-Tips & Footer Notes */}
-        <div className="bg-white rounded-xl p-4 border border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs transition-colors duration-200">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>
-              <strong>{user ? 'Cloud & Local Auto-Save:' : 'Local Auto-Save:'}</strong>{' '}
+              <strong className="text-slate-700 dark:text-slate-200">{user ? 'Cloud & Local Auto-Save:' : 'Local Auto-Save:'}</strong>{' '}
               {user
                 ? 'Your habits and check-ins are synced to your cloud account and stored locally.'
                 : 'Your habits and check-ins are saved in your browser. Sign in to sync across devices!'}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-slate-400">
+          <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500">
             <span className="flex items-center gap-1">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               Monthly Tracker
             </span>
             <span>•</span>
@@ -372,6 +402,15 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={() => setIsAuthModalOpen(false)}
+      />
+
+      {/* Modal for Customizing Habit Persona Avatar */}
+      <AvatarPickerModal
+        isOpen={isAvatarPickerOpen}
+        onClose={() => setIsAvatarPickerOpen(false)}
+        selectedAvatarId={avatarId}
+        onSelectAvatar={handleSelectAvatar}
+        user={user}
       />
     </div>
   );

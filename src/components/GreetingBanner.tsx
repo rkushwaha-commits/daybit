@@ -18,25 +18,25 @@ function getGreeting(name: string): Greeting {
     return {
       emoji: '🌤️',
       text: `Good morning, ${name}!`,
-      sub: 'A fresh start — what habits will you crush today?',
+      sub: 'A fresh start — what habits will you conquer today?',
     };
   } else if (hour >= 12 && hour < 17) {
     return {
       emoji: '☀️',
       text: `Good afternoon, ${name}!`,
-      sub: "You're halfway through the day — keep the momentum going.",
+      sub: "You're halfway through the day — maintain your momentum.",
     };
   } else if (hour >= 17 && hour < 21) {
     return {
       emoji: '🌆',
       text: `Good evening, ${name}!`,
-      sub: "Wind down well — don't forget to log today's habits.",
+      sub: "Wind down peacefully — don't forget to log today's wins.",
     };
   } else {
     return {
       emoji: '🌙',
       text: `Hey, ${name}!`,
-      sub: 'Burning the midnight oil? Log your habits before you sleep.',
+      sub: 'Burning the midnight oil? Log your habits before you rest.',
     };
   }
 }
@@ -72,15 +72,15 @@ const GreetingBanner: React.FC<GreetingBannerProps> = ({ user }) => {
   }, [displayName]);
 
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 border border-emerald-100/80 shadow-sm animate-fade-in">
-      <span className="text-3xl select-none flex-shrink-0" role="img" aria-label="greeting">
+    <div className="relative overflow-hidden flex items-center gap-4 px-5 py-3.5 rounded-2xl backdrop-blur-md bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-indigo-500/10 dark:from-emerald-500/10 dark:via-slate-900/60 dark:to-teal-500/10 border border-emerald-500/20 dark:border-emerald-500/20 shadow-xs animate-fade-in transition-colors duration-200">
+      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-xs ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center text-2xl select-none shrink-0">
         {greeting.emoji}
-      </span>
+      </div>
       <div className="flex flex-col min-w-0">
-        <span className="text-base font-bold text-slate-800 leading-tight">
+        <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
           {greeting.text}
         </span>
-        <span className="text-xs text-slate-500 mt-0.5 leading-snug">
+        <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug font-medium">
           {greeting.sub}
         </span>
       </div>
