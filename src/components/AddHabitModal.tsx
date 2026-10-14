@@ -66,18 +66,18 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-200 ease-in-out animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full overflow-hidden animate-modal-in transition-all duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-200 ease-in-out animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-modal-in transition-all duration-200">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800 shrink-0">
           <div className="flex items-center space-x-2.5">
             <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center transition-transform duration-200 hover:scale-105">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Add New Habit</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Track a new daily routine in your spreadsheet</p>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Add New Habit</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Track a new daily routine in your spreadsheet</p>
             </div>
           </div>
           <button
@@ -88,8 +88,8 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Modal Form - Scrollable */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
           
           {/* Habit Name */}
           <div>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -12,7 +12,7 @@ import {
   Cell,
 } from 'recharts';
 import { Habit } from '../types/habit';
-import { TrendingUp, BarChart2, Flame } from 'lucide-react';
+import { TrendingUp, BarChart2 } from 'lucide-react';
 
 interface DayEntry {
   dateStr: string;
@@ -51,6 +51,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
+  // Track screen width for responsive recharts dimensions
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // ── 1. Daily completion % (line chart) ────────────────────────────────────
   const dailyData = useMemo(() =>
     days.map((day) => {
@@ -62,7 +72,7 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
     [days, habits]
   );
 
-  // ── 2. Per-habit total completions (bar chart) ────────────────────────────
+  // ── 2. Per-habit total completions (bar chart) ────────────────────
   const habitBarData = useMemo(() =>
     habits.map((h) => ({
       name: h.name,
@@ -74,77 +84,39 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
     [habits, days.length]
   );
 
-  // ── 3. Summary stats ──────────────────────────────────────────────────────
-  const totalCompleted = useMemo(() =>
-    habits.reduce((sum, h) => sum + Object.values(h.completions).filter(Boolean).length, 0),
-    [habits]
-  );
-  const overallRate = habits.length > 0 && days.length > 0
-    ? Math.round((totalCompleted / (habits.length * days.length)) * 100)
-    : 0;
-
-  const bestHabit = habitBarData[0];
+  if (!habits.length) return null;
 
   return (
-    <div className="space-y-5">
-      {/* ── Summary pills ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-emerald-300 dark:hover:border-emerald-500 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-transparent dark:border-emerald-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Overall Rate</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{overallRate}%</p>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-amber-300 dark:hover:border-amber-500 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/70 border border-transparent dark:border-amber-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <Flame className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Best Habit</p>
-            <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate" title={bestHabit ? `${bestHabit.emoji} ${bestHabit.name}` : ''}>
-              {bestHabit ? `${bestHabit.emoji} ${bestHabit.name}` : '—'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3 group hover:shadow-md hover:-translate-y-0.5 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all duration-200 ease-in-out shadow-xs">
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 border border-transparent dark:border-indigo-800/60 flex items-center justify-center shrink-0 transition-transform duration-200 ease-in-out group-hover:scale-110">
-            <BarChart2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Check-ins</p>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalCompleted}</p>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* ── Daily Completion Line Chart ───────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs transition-colors duration-200 ease-in-out">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <h2 className="text-sm font-bold text-slate-800 dark:text-white">Daily Completion Rate</h2>
-          <span className="ml-auto text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-            % of habits done each day
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3.5 sm:p-5 shadow-xs transition-colors duration-200 ease-in-out">
+        <div className="flex items-center justify-between gap-2 mb-3.5 sm:mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Daily Completion Rate</h2>
+          </div>
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full shrink-0">
+            % each day
           </span>
         </div>
-        <div style={{ height: 220 }}>
+        <div style={{ height: isMobile ? 180 : 220 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+            <LineChart
+              data={dailyData}
+              margin={{ top: 5, right: 10, left: isMobile ? -25 : -10, bottom: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-800" />
               <XAxis
                 dataKey="day"
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                interval={isMobile ? 3 : 1}
+                tick={{ fontSize: isMobile ? 9 : 11, fill: '#94a3b8' }}
                 tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
               />
               <YAxis
                 domain={[0, 100]}
                 tickFormatter={(v) => `${v}%`}
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                tick={{ fontSize: isMobile ? 9 : 11, fill: '#94a3b8' }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -154,7 +126,7 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
                 dataKey="percentage"
                 stroke="#10b981"
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }}
+                dot={{ r: isMobile ? 2 : 3, fill: '#10b981', strokeWidth: 0 }}
                 activeDot={{ r: 5, fill: '#10b981' }}
               />
             </LineChart>
@@ -163,34 +135,36 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
       </div>
 
       {/* ── Per-Habit Completions Bar Chart ───────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-xs transition-colors duration-200 ease-in-out">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart2 className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-          <h2 className="text-sm font-bold text-slate-800 dark:text-white">Habit Completions This Month</h2>
-          <span className="ml-auto text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-3.5 sm:p-5 shadow-xs transition-colors duration-200 ease-in-out">
+        <div className="flex items-center justify-between gap-2 mb-3.5 sm:mb-4">
+          <div className="flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" />
+            <h2 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white truncate">Habit Completions</h2>
+          </div>
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full shrink-0">
             by habit
           </span>
         </div>
-        <div style={{ height: Math.max(180, habitBarData.length * 38) }}>
+        <div style={{ height: Math.max(160, habitBarData.length * 36) }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={habitBarData}
               layout="vertical"
-              margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
-              barSize={16}
+              margin={{ top: 0, right: 15, left: isMobile ? -10 : 5, bottom: 0 }}
+              barSize={14}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
               <XAxis
                 type="number"
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                tick={{ fontSize: isMobile ? 9 : 11, fill: '#94a3b8' }}
                 tickLine={false}
                 axisLine={{ stroke: '#cbd5e1' }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                width={175}
-                tick={{ fontSize: 11, fill: '#64748b' }}
+                width={isMobile ? 100 : 175}
+                tick={{ fontSize: isMobile ? 10 : 11, fill: '#64748b' }}
                 tickLine={false}
                 axisLine={false}
               />
@@ -216,10 +190,10 @@ const HabitChart: React.FC<HabitChartProps> = ({ days, habits }) => {
           </ResponsiveContainer>
         </div>
         {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap gap-2.5 sm:gap-3 mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800">
           {Object.entries(CATEGORY_COLORS).map(([cat, color]) => (
-            <span key={cat} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+            <span key={cat} className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
               {cat}
             </span>
           ))}

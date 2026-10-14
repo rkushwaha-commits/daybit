@@ -13,6 +13,7 @@ import { DEFAULT_AVATAR_ID } from './data/avatars';
 import GreetingBanner from './components/GreetingBanner';
 import { Sparkles, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import HabitChart from './components/HabitChart';
+import { SetupScreen } from './components/SetupScreen';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -24,8 +25,10 @@ import {
   deleteCloudHabit,
 } from './lib/supabase';
 
-const LOCAL_STORAGE_KEY = 'habitflow_habits_v1';
+const LOCAL_STORAGE_KEY = 'habitflow_habits_v2';
+const OLD_LOCAL_STORAGE_KEY = 'habitflow_habits_v1';
 const AVATAR_STORAGE_KEY = 'habitflow_avatar_id_v1';
+const SETUP_STORAGE_KEY = 'habitflow_setup_complete_v1';
 
 export default function App() {
   // ── Theme State ──
@@ -36,6 +39,13 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [isSetupComplete, setIsSetupComplete] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SETUP_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [avatarId, setAvatarId] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
@@ -97,11 +107,23 @@ export default function App() {
   }, [currentDate, todayDate]);
   const [habits, setHabits] = useState<Habit[]>(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedV2 = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedV2) {
+        const parsed = JSON.parse(savedV2);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
+        }
+      }
+
+      // Check legacy v1 — if user created any custom habits, preserve them
+      const savedV1 = localStorage.getItem(OLD_LOCAL_STORAGE_KEY);
+      if (savedV1) {
+        const parsedV1 = JSON.parse(savedV1);
+        if (Array.isArray(parsedV1) && parsedV1.length > 0) {
+          const customHabits = parsedV1.filter((h: Habit) => !h.id.startsWith('h'));
+          if (customHabits.length > 0) {
+            return [...customHabits, ...getDefaultHabits()];
+          }
         }
       }
     } catch (e) {
@@ -147,12 +169,27 @@ export default function App() {
     }
   }, []);
 
+  const handleSetupComplete = useCallback(() => {
+    setIsSetupComplete(true);
+    try {
+      localStorage.setItem(SETUP_STORAGE_KEY, 'true');
+    } catch (e) {
+      console.warn('Failed to save setup completion:', e);
+    }
+  }, []);
+
   // Subscribe to Supabase auth changes
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
+        setIsSetupComplete(true);
+        try {
+          localStorage.setItem(SETUP_STORAGE_KEY, 'true');
+        } catch {
+          // ignore
+        }
         loadAndSyncUserHabits(currentUser.id);
       }
     });
@@ -161,6 +198,12 @@ export default function App() {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
+        setIsSetupComplete(true);
+        try {
+          localStorage.setItem(SETUP_STORAGE_KEY, 'true');
+        } catch {
+          // ignore
+        }
         loadAndSyncUserHabits(currentUser.id);
       }
     });
@@ -193,12 +236,18 @@ export default function App() {
     const totalPossible = habits.length * days.length;
     let totalLogged = 0;
     let perfectDaysCount = 0;
+    let maxCompleted = 0;
+    let bestDayNum: number | null = null;
 
     days.forEach((day) => {
       const dayCompleted = habits.filter((h) => h.completions[day.dateStr]).length;
       totalLogged += dayCompleted;
       if (habits.length > 0 && dayCompleted === habits.length) {
         perfectDaysCount++;
+      }
+      if (dayCompleted > maxCompleted) {
+        maxCompleted = dayCompleted;
+        bestDayNum = day.dayNumber;
       }
     });
 
@@ -208,7 +257,7 @@ export default function App() {
       totalLogged,
       totalPossible,
       completionRate,
-      bestDay: null,
+      bestDay: bestDayNum ? `Day ${bestDayNum}` : null,
       perfectDaysCount,
       currentActiveHabits: habits.length,
     };
@@ -270,7 +319,7 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    if (window.confirm('Reset all habits back to default sample data?')) {
+    if (window.confirm('Reset all habits back to default clean habits?')) {
       const sample = getDefaultHabits();
       setHabits(sample);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sample));
@@ -312,6 +361,17 @@ export default function App() {
 
   const monthName = getMonthName(currentDate.getMonth());
 
+  // Show Setup / Onboarding screen for first-time users
+  if (!isSetupComplete && !user) {
+    return (
+      <SetupScreen
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onComplete={handleSetupComplete}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent flex flex-col text-slate-800 dark:text-slate-100">
       {/* Top Application Header */}
@@ -335,7 +395,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fade-in">
 
         {/* Navigation & Month Title */}
         <MonthNavigator
@@ -350,10 +410,7 @@ export default function App() {
         {/* Personalized Greeting Banner — only shown when logged in */}
         {user && <GreetingBanner user={user} />}
 
-        {/* 4 Excel Key Performance Cards */}
-        <HabitStats summary={summary} monthName={monthName} />
-
-        {/* Interactive Spreadsheet Habit Grid */}
+        {/* Interactive Spreadsheet Habit Grid (Centerpiece / Main action) */}
         <HabitGrid
           habits={filteredHabits}
           days={days}
@@ -361,8 +418,24 @@ export default function App() {
           onDeleteHabit={handleDeleteHabit}
         />
 
-        {/* Analytics Charts */}
-        <HabitChart days={days} habits={filteredHabits} />
+        {/* Unified Monthly Analysis & Performance Section */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-2 px-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+              Monthly Analytics & Performance
+            </h3>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700/60">
+              {monthName}
+            </span>
+          </div>
+
+          {/* 4 Unified KPI Performance Cards */}
+          <HabitStats summary={summary} monthName={monthName} />
+
+          {/* Analytics Line & Bar Charts */}
+          <HabitChart days={days} habits={filteredHabits} />
+        </div>
 
         {/* Pro-Tips & Footer Notes */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs transition-colors duration-200">

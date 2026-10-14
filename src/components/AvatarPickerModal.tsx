@@ -35,7 +35,7 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
   const isGoogleSelected = selectedAvatarId === 'google';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -43,22 +43,22 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#111726] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-6 z-10 animate-modal-in overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#111726] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-4 sm:p-6 z-10 animate-modal-in max-h-[90vh] flex flex-col overflow-hidden">
         {/* Ambient Top Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-gradient-to-b from-emerald-500/10 to-transparent blur-xl pointer-events-none" />
 
         {/* Header */}
-        <div className="flex items-start justify-between relative mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex items-start justify-between relative mb-4 sm:mb-5 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/25 shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Habit Persona
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Choose an avatar that reflects your daily drive and mindset
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Choose an avatar that reflects your daily drive
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
         </div>
 
         {/* 10 Curated Personas Grid */}
-        <div className="grid grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 overflow-y-auto pr-1 scrollbar-thin flex-1">
           {AVATAR_PERSONAS.map((persona: AvatarPersona) => {
             const isSelected = selectedAvatarId === persona.id;
             return (
@@ -118,21 +118,21 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
 
         {/* Optional Google Account Photo Option (if user has signed in) */}
         {user && (
-          <div className="mt-4 pt-3.5 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+          <div className="mt-3 sm:mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Google DP" className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 )}
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                   Google Account Photo
                 </span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Use your original profile picture
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                  Use original picture
                 </span>
               </div>
             </div>
@@ -142,7 +142,7 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
                 onSelectAvatar('google');
                 onClose();
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 ${
                 isGoogleSelected
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
