@@ -192,7 +192,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <Table2 className="w-6 h-6" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Habit<span className="text-emerald-500">Flow</span>
+                Day<span className="text-emerald-500">bit</span>
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Simple, spreadsheet-style habit tracking

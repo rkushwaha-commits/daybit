@@ -121,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Table2 className="h-3.5 w-3.5" />
               </div>
               <h1 className="text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-0.5">
-                Habit<span className="text-emerald-500">Flow</span>
+                Day<span className="text-emerald-500">bit</span>
               </h1>
             </div>
 
@@ -381,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Table2 className="h-4 w-4" />
               </div>
               <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1 select-none">
-                Habit<span className="text-emerald-500">Flow</span>
+                Day<span className="text-emerald-500">bit</span>
               </h1>
             </div>
 
