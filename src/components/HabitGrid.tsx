@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Check, Trash2, Flame, Sparkles, CheckCircle2, Calendar, ListChecks, ArrowRight, Lock, Unlock } from 'lucide-react';
-import { Habit } from '../types/habit';
+import { Check, Trash2, Flame, Calendar, ListChecks, ArrowRight, Lock, Unlock, Plus } from 'lucide-react';
+import { Habit, HabitCategory } from '../types/habit';
 import { CalendarDay, calculateHabitStreak } from '../utils/dateUtils';
 
 interface HabitGridProps {
@@ -9,6 +9,12 @@ interface HabitGridProps {
   days: CalendarDay[];
   onToggleHabit: (habitId: string, dateStr: string) => void;
   onDeleteHabit: (habitId: string) => void;
+  categories: HabitCategory[];
+  selectedCategory: string;
+  onSelectCategory: (category: string) => void;
+  onOpenAddModal: () => void;
+  activeView?: 'grid' | 'today';
+  onViewChange?: (view: 'grid' | 'today') => void;
 }
 
 const ACCOUNTABILITY_LOCK_KEY = 'habitflow_accountability_lock_v1';
@@ -18,9 +24,27 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   days,
   onToggleHabit,
   onDeleteHabit,
+  categories,
+  selectedCategory,
+  onSelectCategory,
+  onOpenAddModal,
+  activeView: controlledActiveView,
+  onViewChange,
 }) => {
-  // Mobile view switcher: 'grid' (spreadsheet) vs 'today' (daily card checklist)
-  const [activeView, setActiveView] = useState<'grid' | 'today'>('grid');
+  // Mobile view switcher: defaults to 'today' on phones (<640px), 'grid' on desktop
+  const [internalView, setInternalView] = useState<'grid' | 'today'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+      return 'today';
+    }
+    return 'grid';
+  });
+
+  const activeView = controlledActiveView ?? internalView;
+
+  const handleViewChange = (v: 'grid' | 'today') => {
+    if (onViewChange) onViewChange(v);
+    setInternalView(v);
+  };
 
   // Accountability Lock state: when true, only today's habits can be edited
   const [isLocked, setIsLocked] = useState<boolean>(() => {
@@ -55,7 +79,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
     if (todayThRef.current && tableContainerRef.current) {
       const container = tableContainerRef.current;
       const todayEl = todayThRef.current;
-      const stickyColWidth = window.innerWidth < 640 ? 130 : 280;
+      const stickyColWidth = window.innerWidth < 640 ? 140 : 280;
       const targetScroll = todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2;
       container.scrollTo({ left: Math.max(0, targetScroll), behavior });
     }
@@ -125,41 +149,77 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
     : 0;
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden transition-colors duration-200">
-      {/* Sleek helper & status bar with View Switcher */}
-      <div className="bg-slate-50/80 dark:bg-slate-800/60 px-3 sm:px-4 py-2.5 border-b border-slate-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-        {/* View Switcher Tabs: Grid vs Today */}
-        <div className="flex items-center gap-1.5 bg-slate-200/60 dark:bg-slate-900/60 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
-          <button
-            onClick={() => setActiveView('grid')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold text-xs transition-all duration-150 cursor-pointer ${
-              activeView === 'grid'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Monthly Grid</span>
-          </button>
-          <button
-            onClick={() => setActiveView('today')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold text-xs transition-all duration-150 cursor-pointer ${
-              activeView === 'today'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ListChecks className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Today's View</span>
-            {todayDay && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
-                {todayCompletedCount}/{habits.length}
-              </span>
-            )}
-          </button>
+    <div className="bg-white dark:bg-[#0f1422] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden transition-colors duration-200">
+      
+      {/* ─────────────────────────────────────────────────────────────
+          STREAMLINED GRID TOOLBAR (VIEW SWITCHER + CATEGORIES + LOCK)
+      ───────────────────────────────────────────────────────────── */}
+      <div className="bg-slate-50/90 dark:bg-slate-900/90 px-3 sm:px-4 py-2 border-b border-slate-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        
+        {/* Left: View Switcher Tabs + Inline Category Filters */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Switcher Tabs: Grid vs Today */}
+          <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-950/80 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
+            <button
+              onClick={() => handleViewChange('grid')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
+                activeView === 'grid'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Grid</span>
+            </button>
+            <button
+              onClick={() => handleViewChange('today')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
+                activeView === 'today'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <ListChecks className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Today</span>
+              {todayDay && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
+                  {todayCompletedCount}/{habits.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="hidden sm:block h-4 w-px bg-slate-200 dark:bg-slate-800" />
+
+          {/* Inline Category Filter Chips */}
+          <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none touch-pan-x">
+            <button
+              onClick={() => onSelectCategory('all')}
+              className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                selectedCategory === 'all'
+                  ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-2xs'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => onSelectCategory(cat)}
+                className={`px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Right Action Tools: Lock/Unlock Button, Jump to Today & Legend */}
+        {/* Right: Accountability Lock Button & Quick Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Accountability Lock Button */}
           <button
@@ -197,24 +257,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
           {todayDay && activeView === 'grid' && (
             <button
               onClick={() => scrollToToday('smooth')}
-              className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
               title="Scroll directly to today's column"
             >
               <ArrowRight className="w-3 h-3" />
-              <span className="hidden xs:inline">Jump to Today</span>
+              <span className="hidden xs:inline">Today</span>
             </button>
           )}
-
-          <div className="hidden lg:flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm shadow-2xs shadow-emerald-500/50"></span>
-              <span className="text-slate-700 dark:text-slate-300">Completed</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-sm"></span>
-              <span className="text-slate-700 dark:text-slate-300">Pending</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -247,7 +296,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
               {/* Habit Cards for Today */}
               {habits.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
-                  No habits found. Add your first habit to start tracking!
+                  No habits found. Click <strong>"Add Habit"</strong> to start tracking!
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
@@ -323,6 +372,22 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                           <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                           <span>{streak.current}d</span>
                         </div>
+
+                        {/* Delete Habit Action (Phone & Desktop) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Are you sure you want to delete "${habit.name}"?`)) {
+                              onDeleteHabit(habit.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all shrink-0 cursor-pointer"
+                          title="Delete habit"
+                          aria-label="Delete habit"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     );
                   })}
@@ -331,7 +396,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
             </>
           ) : (
             <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-sm">
-              The currently selected month does not contain today's date. Use the Month Navigator to return to the current month!
+              The currently selected month does not contain today's date.
             </div>
           )}
         </div>
@@ -343,69 +408,83 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
           <table className="w-full border-collapse text-left text-xs">
             {/* Table Header: Column headers & Dates */}
             <thead>
-              <tr className="bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-b border-slate-200/90 dark:border-slate-700/80 divide-x divide-slate-200/80 dark:divide-slate-700/80 select-none">
+              <tr className="bg-slate-100/90 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 border-b border-slate-200/90 dark:border-slate-800 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
                 
-                {/* Sticky Column: Responsive width (130px on mobile, 280px on desktop) */}
-                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-800 px-2.5 sm:px-4 py-3 min-w-[130px] sm:min-w-[280px] font-semibold text-slate-700 dark:text-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
-                  <div className="flex items-center justify-between">
-                    <span className="uppercase tracking-wider text-[10px] sm:text-[11px] text-slate-700 dark:text-slate-200 font-extrabold truncate">
-                      Habit ({habits.length})
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
-                      Category / Target
+                {/* Sticky Column: Contains "+ Add Habit" button (like reference app "+ Add New Thing") */}
+                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 px-2 sm:px-3 py-2 min-w-[125px] sm:min-w-[270px] max-w-[130px] sm:max-w-none font-semibold text-slate-700 dark:text-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={onOpenAddModal}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 shadow-xs transition-all cursor-pointer"
+                      title="Create a new habit"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Habit</span>
+                    </button>
+                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold hidden sm:inline">
+                      {habits.length} habits
                     </span>
                   </div>
                 </th>
 
-                {/* Day Columns (1 to 28/30/31) */}
+                {/* Day Columns (High-Density 2-Tier Header, with solid pill on Today) */}
                 {days.map((day) => (
                   <th
                     key={day.dateStr}
                     ref={day.isToday ? todayThRef : undefined}
-                    className={`px-1 py-2 text-center min-w-[36px] sm:min-w-[40px] max-w-[42px] transition-colors ${
+                    className={`px-0.5 py-1 text-center min-w-[34px] sm:min-w-[38px] max-w-[40px] transition-colors ${
                       day.isToday
-                        ? 'bg-emerald-100/90 dark:bg-emerald-950/70 font-bold text-emerald-900 dark:text-emerald-300 border-b-2 border-b-emerald-500'
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/40'
                         : day.isWeekend
-                        ? 'bg-slate-100/60 dark:bg-slate-900/60'
-                        : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/60'
+                        ? 'bg-slate-100/60 dark:bg-slate-950/40'
+                        : 'hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
                     }`}
                     title={`${day.fullDayName}, ${day.dateStr}`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`text-[9px] sm:text-[10px] uppercase tracking-tight ${
-                          day.isToday
-                            ? 'text-emerald-800 dark:text-emerald-400 font-bold'
-                            : day.isWeekend
-                            ? 'text-slate-600 dark:text-slate-300 font-bold'
-                            : 'text-slate-500 dark:text-slate-400 font-semibold'
-                        }`}
-                      >
-                        {day.dayOfWeek}
-                      </span>
-                      <span
-                        className={`text-xs font-mono font-bold mt-0.5 ${
-                          day.isToday
-                            ? 'bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-xs shadow-emerald-600/40'
-                            : day.isWeekend
-                            ? 'text-slate-700 dark:text-slate-200'
-                            : 'text-slate-800 dark:text-slate-100'
-                        }`}
-                      >
-                        {day.dayNumber}
-                      </span>
+                    <div className="flex flex-col items-center justify-center">
+                      {day.isToday ? (
+                        <div className="w-full py-0.5 px-0.5 rounded-lg bg-emerald-600 text-white shadow-xs flex flex-col items-center">
+                          <span className="text-[8px] uppercase font-bold tracking-tight leading-none text-emerald-100">
+                            {day.dayOfWeek}
+                          </span>
+                          <span className="text-xs font-black leading-tight mt-0.5">
+                            {day.dayNumber}
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            className={`text-[8px] uppercase tracking-tight leading-none ${
+                              day.isWeekend
+                                ? 'text-slate-500 dark:text-slate-400 font-bold'
+                                : 'text-slate-400 dark:text-slate-500 font-medium'
+                            }`}
+                          >
+                            {day.dayOfWeek}
+                          </span>
+                          <span
+                            className={`text-xs font-extrabold leading-tight mt-0.5 ${
+                              day.isWeekend
+                                ? 'text-slate-700 dark:text-slate-300'
+                                : 'text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            {day.dayNumber}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </th>
                 ))}
 
-                {/* Monthly Stats Columns (Pinned Right on sm+ screens, scrolls naturally on mobile) */}
-                <th className="sm:sticky sm:right-[112px] sm:z-20 px-3 py-3 text-center w-[92px] min-w-[92px] max-w-[92px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border-l border-slate-200/80 dark:border-slate-700/80 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                {/* Monthly Stats Columns (Pinned Right on sm+ screens) */}
+                <th className="sm:sticky sm:right-[112px] sm:z-20 px-3 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
                   Progress
                 </th>
-                <th className="sm:sticky sm:right-[46px] sm:z-20 px-3 py-3 text-center w-[66px] min-w-[66px] max-w-[66px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border-l border-slate-200/80 dark:border-slate-700/80">
+                <th className="sm:sticky sm:right-[46px] sm:z-20 px-2 py-2 text-center w-[66px] min-w-[66px] max-w-[66px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
                   Streak
                 </th>
-                <th className="sm:sticky sm:right-0 sm:z-20 px-2 py-3 text-center w-[46px] min-w-[46px] max-w-[46px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 border-l border-slate-200/80 dark:border-slate-700/80">
+                <th className="sm:sticky sm:right-0 sm:z-20 px-2 py-2 text-center w-[46px] min-w-[46px] max-w-[46px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
                   Action
                 </th>
               </tr>
@@ -419,7 +498,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                     colSpan={days.length + 4}
                     className="px-6 py-12 text-center text-slate-500 dark:text-slate-400 text-sm font-medium"
                   >
-                    No habits found. Click <strong className="text-emerald-600 dark:text-emerald-400">"New Habit"</strong> to start tracking!
+                    No habits found. Click <strong className="text-emerald-600 dark:text-emerald-400">"Add Habit"</strong> above to start tracking!
                   </td>
                 </tr>
               ) : (
@@ -434,14 +513,14 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       key={habit.id}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group"
                     >
-                      {/* Sticky Habit Label Cell (Compact on mobile) */}
-                      <td className="sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 px-2.5 sm:px-4 py-2.5 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <span className="text-slate-400 dark:text-slate-500 font-mono text-[11px] w-4 text-right font-medium hidden sm:inline-block">
+                      {/* Sticky Habit Label Cell */}
+                      <td className="sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 min-w-[125px] sm:min-w-[270px] max-w-[130px] sm:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
+                        <div className="flex items-center space-x-2 sm:space-x-2.5">
+                          <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] w-3.5 text-right font-medium hidden sm:inline-block">
                             {rowIndex + 1}
                           </span>
                           <div
-                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-sm sm:text-base shrink-0 shadow-2xs transition-transform duration-200 ease-in-out group-hover:scale-105"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0 shadow-2xs"
                             style={{ backgroundColor: `${habit.color}15`, border: `1px solid ${habit.color}40` }}
                           >
                             {habit.emoji}
@@ -452,7 +531,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                             </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span
-                                className="inline-block text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full transition-colors duration-200"
+                                className="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded-full"
                                 style={{
                                   color: habit.color,
                                   backgroundColor: `${habit.color}18`,
@@ -460,15 +539,15 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               >
                                 {habit.category}
                               </span>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-400 font-mono hidden sm:inline">
-                                Goal: {target}d
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono hidden sm:inline">
+                                {target}d
                               </span>
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Interactive Checkbox Day Cells */}
+                      {/* Interactive Checkbox Day Cells (Clean block cells) */}
                       {days.map((day) => {
                         const isChecked = Boolean(habit.completions[day.dateStr]);
                         const isCellDisabled = day.isFuture || (isLocked && !day.isToday);
@@ -492,37 +571,37 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               isChecked ? 'Completed' : 'Pending'
                             }${
                               day.isToday
-                                ? ' • Today (Click to toggle)'
+                                ? ' • Today'
                                 : day.isFuture
                                 ? ' • Future (Locked)'
                                 : isLocked
-                                ? ' • Past (Locked: Click Unlock button above to edit)'
+                                ? ' • Past (Locked)'
                                 : ' • Past (Editable)'
                             }`}
                           >
-                            <div className="w-full h-11 flex items-center justify-center">
+                            <div className="w-full h-10 flex items-center justify-center">
                               {isChecked ? (
                                 <div
-                                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-white transition-all duration-150 ease-in-out ${
-                                    isCellDisabled ? 'opacity-85' : 'transform hover:scale-110 active:scale-90'
+                                  className={`w-6 h-6 rounded-md flex items-center justify-center text-white transition-all duration-150 ease-in-out ${
+                                    isCellDisabled ? 'opacity-85' : 'transform hover:scale-105 active:scale-95'
                                   }`}
                                   style={{
                                     backgroundColor: habit.color,
-                                    boxShadow: `0 3px 8px ${habit.color}45`,
+                                    boxShadow: `0 2px 6px ${habit.color}40`,
                                   }}
                                 >
                                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                                 </div>
                               ) : (
                                 <div
-                                  className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-150 ease-in-out ${
+                                  className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all duration-150 ease-in-out ${
                                     isCellDisabled
-                                      ? 'border-slate-200 dark:border-slate-800 opacity-40'
-                                      : 'border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:scale-105'
+                                      ? 'border-slate-200 dark:border-slate-800/80 opacity-40'
+                                      : 'border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40'
                                   }`}
                                 >
                                   {day.isToday ? (
-                                    <span className="opacity-0 hover:opacity-40 text-[10px] font-bold text-emerald-500 dark:text-emerald-400 transition-opacity">
+                                    <span className="opacity-0 hover:opacity-40 text-[10px] font-bold text-emerald-500 dark:text-emerald-400">
                                       ✓
                                     </span>
                                   ) : isCellDisabled ? (
@@ -530,7 +609,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                                       •
                                     </span>
                                   ) : (
-                                    <span className="opacity-0 hover:opacity-40 text-[10px] font-bold text-slate-500 dark:text-slate-300 transition-opacity">
+                                    <span className="opacity-0 hover:opacity-40 text-[10px] font-bold text-slate-400">
                                       ✓
                                     </span>
                                   )}
@@ -541,14 +620,14 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                         );
                       })}
 
-                      {/* Monthly Progress Cell (Sticky right on desktop only) */}
-                      <td className="sm:sticky sm:right-[112px] sm:z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 px-3 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-800/80 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
+                      {/* Monthly Progress Cell */}
+                      <td className="sm:sticky sm:right-[112px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2.5 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
                         <div className="flex flex-col items-center">
                           <div className="flex items-center justify-between w-full text-[11px] font-mono font-bold text-slate-800 dark:text-slate-200">
                             <span>{completedDaysInMonth}/{target}</span>
                             <span className="text-slate-500 dark:text-slate-400">{completionPercentage}%</span>
                           </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-700/80 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full mt-1 overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500 ease-in-out"
                               style={{
@@ -561,15 +640,15 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       </td>
 
                       {/* Streak Count Cell */}
-                      <td className="sm:sticky sm:right-[46px] sm:z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 px-2 py-2 text-center font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-800/80 transition-colors duration-150 ease-in-out">
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-700/60 transition-transform duration-200 ease-in-out hover:scale-105 shadow-2xs">
+                      <td className="sm:sticky sm:right-[46px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 py-2 text-center font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
+                        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-700/60 shadow-2xs">
                           <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
                           <span>{streak.current}</span>
                         </div>
                       </td>
 
                       {/* Action Cell */}
-                      <td className="sm:sticky sm:right-0 sm:z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800 px-2 py-2 text-center w-[46px] min-w-[46px] max-w-[46px] border-l border-slate-200/80 dark:border-slate-800/80 transition-colors duration-150 ease-in-out">
+                      <td className="sm:sticky sm:right-0 sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 py-2 text-center w-[46px] min-w-[46px] max-w-[46px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -577,7 +656,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               onDeleteHabit(habit.id);
                             }
                           }}
-                          className="p-1 text-slate-400 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all duration-150 ease-in-out hover:scale-110 active:scale-90"
+                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all duration-150 cursor-pointer"
                           title="Delete habit"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -588,78 +667,100 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 })
               )}
 
-              {/* Bottom Summary Row 1: Daily Completed Count */}
+              {/* Bottom Summary Rows */}
               {habits.length > 0 && (
                 <>
-                  <tr className="bg-slate-100/90 dark:bg-slate-800 font-medium text-slate-700 dark:text-slate-200 divide-x divide-slate-200/80 dark:divide-slate-700/80 border-t-2 border-slate-300/80 dark:border-slate-700">
-                    <td className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-800 px-2.5 sm:px-4 py-2.5 text-xs shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
-                      <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5 truncate">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  {/* Daily Completed Count Row */}
+                  <tr className="bg-slate-100/90 dark:bg-slate-900/95 font-bold border-t-2 border-slate-300 dark:border-slate-700 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
+                    <td className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-900 px-3 py-2 text-slate-800 dark:text-slate-200 text-xs shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         <span>Completed</span>
-                      </span>
+                      </div>
                     </td>
-                    {dailyTotals.map((dt) => (
+
+                    {dailyTotals.map((stat, i) => (
                       <td
-                        key={`total-${dt.dateStr}`}
-                        className={`text-center py-2 font-mono text-[11px] font-bold ${
-                          dt.isPerfect
-                            ? 'bg-emerald-100/90 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-300'
-                            : dt.count > 0
-                            ? 'text-slate-800 dark:text-white'
-                            : 'text-slate-400 dark:text-slate-500'
+                        key={`total-${days[i].dateStr}`}
+                        className={`p-0 text-center text-xs font-mono font-extrabold ${
+                          stat.isPerfect
+                            ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300'
+                            : days[i].isToday
+                            ? 'bg-emerald-50/60 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
+                            : stat.count > 0
+                            ? 'text-slate-800 dark:text-slate-200'
+                            : 'text-slate-400 dark:text-slate-600'
                         }`}
                       >
-                        {dt.count}
+                        <div className="w-full h-8 flex items-center justify-center">
+                          {stat.count}
+                        </div>
                       </td>
                     ))}
-                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-center text-[11px] text-slate-700 dark:text-slate-200 font-bold w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-700/80 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+
+                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-700 dark:text-slate-300 font-mono text-xs border-l border-slate-200/80 dark:border-slate-800">
                       Total
                     </td>
-                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-100 dark:bg-slate-800 px-2 py-2 text-center text-[11px] text-slate-400 dark:text-slate-500 font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-700/80">
+                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-500 dark:text-slate-400 text-xs border-l border-slate-200/80 dark:border-slate-800">
                       —
                     </td>
-                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-100 dark:bg-slate-800 px-2 py-2 text-center text-[11px] text-slate-400 dark:text-slate-500 w-[46px] min-w-[46px] max-w-[46px] border-l border-slate-200/80 dark:border-slate-700/80">
-                    </td>
+                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 border-l border-slate-200/80 dark:border-slate-800" />
                   </tr>
 
-                  {/* Bottom Summary Row 2: Daily Success Rate % */}
-                  <tr className="bg-slate-50 dark:bg-slate-800/80 font-medium text-slate-700 dark:text-slate-200 divide-x divide-slate-200/80 dark:divide-slate-700/80 border-t border-slate-200/80 dark:border-slate-700">
-                    <td className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800/80 px-2.5 sm:px-4 py-2.5 text-xs shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
-                      <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5 truncate">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  {/* Daily Success % Row */}
+                  <tr className="bg-slate-50/90 dark:bg-slate-950/80 text-[11px] font-semibold divide-x divide-slate-200/70 dark:divide-slate-800/80 select-none">
+                    <td className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-slate-600 dark:text-slate-400 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                         <span>Success %</span>
-                      </span>
+                      </div>
                     </td>
-                    {dailyTotals.map((dt) => (
+
+                    {dailyTotals.map((stat, i) => (
                       <td
-                        key={`pct-${dt.dateStr}`}
-                        className={`text-center py-2 font-mono text-[10px] font-bold ${
-                          dt.isPerfect
-                            ? 'bg-emerald-100/90 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-300'
-                            : dt.percentage >= 70
-                            ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/40'
-                            : dt.percentage > 0
-                            ? 'text-slate-700 dark:text-slate-200'
-                            : 'text-slate-400 dark:text-slate-500'
+                        key={`pct-${days[i].dateStr}`}
+                        className={`p-0 text-center font-mono ${
+                          stat.isPerfect
+                            ? 'text-emerald-700 dark:text-emerald-400 font-bold'
+                            : days[i].isToday
+                            ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                            : stat.percentage > 0
+                            ? 'text-slate-600 dark:text-slate-300'
+                            : 'text-slate-400 dark:text-slate-600'
                         }`}
                       >
-                        {dt.percentage}%
+                        <div className="w-full h-7 flex items-center justify-center">
+                          {stat.percentage}%
+                        </div>
                       </td>
                     ))}
-                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-center text-[11px] text-slate-700 dark:text-slate-200 font-bold w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-700/80 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+
+                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400 font-mono border-l border-slate-200/80 dark:border-slate-800">
                       Avg
                     </td>
-                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-center text-[11px] text-slate-400 dark:text-slate-500 font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-700/80">
+                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-400 border-l border-slate-200/80 dark:border-slate-800">
                       —
                     </td>
-                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-50 dark:bg-slate-800/80 px-2 py-2 text-center text-[11px] text-slate-400 dark:text-slate-500 w-[46px] min-w-[46px] max-w-[46px] border-l border-slate-200/80 dark:border-slate-700/80">
-                    </td>
+                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 border-l border-slate-200/80 dark:border-slate-800" />
                   </tr>
                 </>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Floating Jump to Today shortcut on mobile when viewing spreadsheet grid */}
+      {activeView === 'grid' && todayDay && (
+        <button
+          type="button"
+          onClick={() => scrollToToday('smooth')}
+          className="fixed bottom-20 right-4 z-30 sm:hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-600/35 active:scale-95 transition-all cursor-pointer"
+          title="Jump to today's column"
+        >
+          <ArrowRight className="w-3.5 h-3.5" />
+          <span>Today</span>
+        </button>
       )}
     </div>
   );

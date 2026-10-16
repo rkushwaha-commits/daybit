@@ -3,7 +3,6 @@ import { Habit, HabitCategory, MonthSummary } from './types/habit';
 import { getDefaultHabits } from './data/initialHabits';
 import { getDaysForMonth, getMonthName, calculateHabitStreak } from './utils/dateUtils';
 import { Header } from './components/Header';
-import { MonthNavigator } from './components/MonthNavigator';
 import { HabitStats } from './components/HabitStats';
 import { HabitGrid } from './components/HabitGrid';
 import { AddHabitModal } from './components/AddHabitModal';
@@ -14,6 +13,7 @@ import GreetingBanner from './components/GreetingBanner';
 import { Sparkles, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import HabitChart from './components/HabitChart';
 import { SetupScreen } from './components/SetupScreen';
+import { MobileBottomBar } from './components/MobileBottomBar';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -39,6 +39,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'today' | 'grid' | 'stats'>('today');
   const [isSetupComplete, setIsSetupComplete] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SETUP_STORAGE_KEY) === 'true';
@@ -46,6 +47,7 @@ export default function App() {
       return false;
     }
   });
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [avatarId, setAvatarId] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
@@ -105,6 +107,7 @@ export default function App() {
   const days = useMemo(() => {
     return getDaysForMonth(currentDate.getFullYear(), currentDate.getMonth(), todayDate);
   }, [currentDate, todayDate]);
+
   const [habits, setHabits] = useState<Habit[]>(() => {
     try {
       const savedV2 = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -131,6 +134,12 @@ export default function App() {
     }
     return getDefaultHabits();
   });
+
+  const todayDay = useMemo(() => days.find((d) => d.isToday), [days]);
+  const todayCompletedCount = useMemo(() => {
+    if (!todayDay) return 0;
+    return habits.filter((h) => h.completions[todayDay.dateStr]).length;
+  }, [todayDay, habits]);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -361,28 +370,47 @@ export default function App() {
 
   const monthName = getMonthName(currentDate.getMonth());
 
-  // Show Setup / Onboarding screen for first-time users
-  if (!isSetupComplete && !user) {
+  const handleSaveSetupHabits = (newHabits: Habit[]) => {
+    setHabits(newHabits);
+    if (user) {
+      upsertAllCloudHabits(user.id, newHabits).catch(console.error);
+    }
+  };
+
+  // Show Setup / Onboarding screen for first-time users or when opened manually
+  if ((!isSetupComplete && !user) || isSetupOpen) {
     return (
       <SetupScreen
         theme={theme}
         onToggleTheme={toggleTheme}
-        onComplete={handleSetupComplete}
+        selectedAvatarId={avatarId}
+        onSelectAvatar={handleSelectAvatar}
+        currentHabits={habits}
+        onSaveHabits={handleSaveSetupHabits}
+        onComplete={() => {
+          handleSetupComplete();
+          setIsSetupOpen(false);
+        }}
+        onClose={isSetupComplete || user ? () => setIsSetupOpen(false) : undefined}
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col text-slate-800 dark:text-slate-100">
-      {/* Top Application Header */}
+      {/* Top Application Header with Integrated Month Navigation */}
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        categories={categories}
+        currentDate={currentDate}
+        todayDate={todayDate}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+        onJumpToCurrentMonth={handleJumpToCurrentMonth}
+        daysCount={days.length}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onResetData={handleResetData}
+        onOpenSetup={() => setIsSetupOpen(true)}
         bestStreak={bestStreak}
         user={user}
         isSyncing={isSyncing}
@@ -395,17 +423,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fade-in">
-
-        {/* Navigation & Month Title */}
-        <MonthNavigator
-          currentDate={currentDate}
-          todayDate={todayDate}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onJumpToCurrentMonth={handleJumpToCurrentMonth}
-          daysCount={days.length}
-        />
+      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-3 sm:py-5 pb-24 sm:pb-6 space-y-4 sm:space-y-5 animate-fade-in">
 
         {/* Personalized Greeting Banner — only shown when logged in */}
         {user && <GreetingBanner user={user} />}
@@ -416,10 +434,16 @@ export default function App() {
           days={days}
           onToggleHabit={handleToggleHabit}
           onDeleteHabit={handleDeleteHabit}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          onOpenAddModal={() => setIsAddModalOpen(true)}
+          activeView={mobileTab === 'grid' ? 'grid' : 'today'}
+          onViewChange={(view) => setMobileTab(view)}
         />
 
         {/* Unified Monthly Analysis & Performance Section */}
-        <div className="space-y-4 pt-2">
+        <div id="analytics-section" className="space-y-4 pt-2">
           <div className="flex items-center gap-2 px-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
             <h3 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
@@ -461,6 +485,21 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Native Mobile Bottom Navigation Bar (Thumb-friendly on phone) */}
+      <MobileBottomBar
+        activeTab={mobileTab}
+        onTabChange={(tab) => {
+          setMobileTab(tab);
+          if (tab === 'stats') {
+            const statsEl = document.getElementById('analytics-section');
+            statsEl?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
+        onOpenAddModal={() => setIsAddModalOpen(true)}
+        todayCompletedCount={todayCompletedCount}
+        totalHabitsCount={habits.length}
+      />
 
       {/* Modal for Creating New Habit */}
       <AddHabitModal

@@ -35,7 +35,7 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
   const isGoogleSelected = selectedAvatarId === 'google';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -43,7 +43,7 @@ export const AvatarPickerModal: React.FC<AvatarPickerModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#111726] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-4 sm:p-6 z-10 animate-modal-in max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#111726] rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200/90 dark:border-slate-800 p-4 sm:p-6 pb-safe sm:pb-6 z-10 animate-modal-in max-h-[92vh] flex flex-col overflow-hidden">
         {/* Ambient Top Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-20 bg-gradient-to-b from-emerald-500/10 to-transparent blur-xl pointer-events-none" />
 
