@@ -518,7 +518,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {/* Desktop Three Dots More Menu */}
-            <div className="relative">
+            <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen((prev) => !prev)}
                 title="More Options"
@@ -531,6 +531,99 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
+
+              {/* Desktop Dropdown Menu */}
+              {isMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800"
+                >
+                  <div className="p-1">
+                    {/* Theme Toggle */}
+                    <button
+                      onClick={(e) => { onToggleTheme(e); setIsMenuOpen(false); }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-2">
+                        {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+                        <span>Theme</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
+                        {theme}
+                      </span>
+                    </button>
+
+                    {/* Setup Wizard */}
+                    <button
+                      onClick={() => { setIsMenuOpen(false); onOpenSetup(); }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-500" />
+                        <span>Setup Wizard</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Preferences</span>
+                    </button>
+                  </div>
+
+                  <div className="p-1">
+                    {/* Avatar Picker */}
+                    <button
+                      onClick={() => { setIsMenuOpen(false); onOpenAvatarPicker(); }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-2">
+                        <UserCircle2 className="w-4 h-4 text-indigo-500" />
+                        <span>Avatar Persona</span>
+                      </div>
+                      <span className="text-sm">{persona.emoji}</span>
+                    </button>
+
+                    {/* Reset Habits */}
+                    <button
+                      onClick={() => { setIsMenuOpen(false); onResetData(); }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RotateCcw className="w-4 h-4 text-slate-400" />
+                        <span>Reset Habits</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">Defaults</span>
+                    </button>
+                  </div>
+
+                  <div className="p-1">
+                    {user ? (
+                      <button
+                        onClick={() => { setIsMenuOpen(false); onSignOut(); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                        role="menuitem"
+                      >
+                        <div className="flex items-center gap-2">
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </div>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setIsMenuOpen(false); onOpenAuthModal(); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl cursor-pointer"
+                        role="menuitem"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Cloud className="w-4 h-4" />
+                          <span>Cloud Sync</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">Sign In</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
