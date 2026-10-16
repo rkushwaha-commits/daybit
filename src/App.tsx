@@ -25,10 +25,10 @@ import {
   deleteCloudHabit,
 } from './lib/supabase';
 
-const LOCAL_STORAGE_KEY = 'habitflow_habits_v2';
-const OLD_LOCAL_STORAGE_KEY = 'habitflow_habits_v1';
-const AVATAR_STORAGE_KEY = 'habitflow_avatar_id_v1';
-const SETUP_STORAGE_KEY = 'habitflow_setup_complete_v1';
+const LOCAL_STORAGE_KEY = 'daybit_habits_v2';
+const OLD_LOCAL_STORAGE_KEY = 'daybit_habits_v1';
+const AVATAR_STORAGE_KEY = 'daybit_avatar_id_v1';
+const SETUP_STORAGE_KEY = 'daybit_setup_complete_v1';
 
 export default function App() {
   // ── Theme State ──

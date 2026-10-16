@@ -5,7 +5,7 @@ export type Theme = 'light' | 'dark';
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      const saved = localStorage.getItem('habitflow_theme_v1') as Theme | null;
+      const saved = localStorage.getItem('daybit_theme_v1') as Theme | null;
       if (saved === 'dark' || saved === 'light') return saved;
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
@@ -24,7 +24,7 @@ export function useTheme() {
       root.classList.remove('dark');
     }
     try {
-      localStorage.setItem('habitflow_theme_v1', theme);
+      localStorage.setItem('daybit_theme_v1', theme);
     } catch {
       // ignore
     }

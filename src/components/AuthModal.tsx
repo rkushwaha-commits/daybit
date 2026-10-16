@@ -42,7 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Sign In to HabitFlow
+                Sign In to Daybit
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Sync your habits everywhere</p>
             </div>
@@ -128,7 +128,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               Free cloud sync. No passwords or credit cards required.
             </p>
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              Prefer to stay offline? You can keep using HabitFlow locally without an account.
+              Prefer to stay offline? You can keep using Daybit locally without an account.
             </p>
           </div>
 

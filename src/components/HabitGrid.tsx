@@ -17,7 +17,7 @@ interface HabitGridProps {
   onViewChange?: (view: 'grid' | 'today') => void;
 }
 
-const ACCOUNTABILITY_LOCK_KEY = 'habitflow_accountability_lock_v1';
+const ACCOUNTABILITY_LOCK_KEY = 'daybit_accountability_lock_v1';
 
 export const HabitGrid: React.FC<HabitGridProps> = ({
   habits,
