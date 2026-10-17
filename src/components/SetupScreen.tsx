@@ -206,7 +206,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium text-sm border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-medium text-sm border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
               >
                 {googleLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
@@ -231,9 +231,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 type="button"
                 onClick={() => changeStep(2)}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium text-sm transition-all active:scale-[0.99] cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700/90 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium text-sm transition-all active:scale-[0.99] cursor-pointer"
               >
-                <User className="w-4 h-4 text-slate-400" />
+                <User className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <span>Continue as Guest</span>
               </button>
             </div>
