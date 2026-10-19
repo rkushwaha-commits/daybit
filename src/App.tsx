@@ -494,68 +494,150 @@ export default function App() {
         onToggleTheme={toggleTheme}
         selectedAvatarId={avatarId}
         onOpenAvatarPicker={() => setIsAvatarPickerOpen(true)}
+        activeMobileTab={mobileTab}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-3 sm:py-5 pb-24 sm:pb-6 space-y-4 sm:space-y-5 animate-fade-in">
 
-        {/* Personalized Greeting Banner — only shown when logged in */}
-        {user && <GreetingBanner user={user} />}
+        {/* ─────────────────────────────────────────────────────────────
+            MOBILE-ONLY DEDICATED VIEW (Uncluttered, fast, tab-specific)
+        ───────────────────────────────────────────────────────────── */}
+        <div className="sm:hidden space-y-3.5">
+          {/* Today Tab: The focused daily ritual */}
+          {mobileTab === 'today' && (
+            <div className="space-y-3 animate-fade-in">
+              {user && <GreetingBanner user={user} />}
+              <HabitGrid
+                habits={filteredHabits}
+                days={days}
+                onToggleHabit={handleToggleHabit}
+                onDeleteHabit={handleDeleteHabit}
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                onOpenAddModal={() => setIsAddModalOpen(true)}
+                activeView="today"
+                onViewChange={(view) => setMobileTab(view === 'today' ? 'today' : 'grid')}
+              />
+            </div>
+          )}
 
-        {/* Interactive Spreadsheet Habit Grid (Centerpiece / Main action) */}
-        <HabitGrid
-          habits={filteredHabits}
-          days={days}
-          onToggleHabit={handleToggleHabit}
-          onDeleteHabit={handleDeleteHabit}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onOpenAddModal={() => setIsAddModalOpen(true)}
-          activeView={mobileTab === 'grid' ? 'grid' : 'today'}
-          onViewChange={(view) => setMobileTab(view)}
-        />
+          {/* Grid / Month Tab: The monthly streak matrix & spreadsheet */}
+          {mobileTab === 'grid' && (
+            <div className="space-y-3 animate-fade-in">
+              <HabitGrid
+                habits={filteredHabits}
+                days={days}
+                onToggleHabit={handleToggleHabit}
+                onDeleteHabit={handleDeleteHabit}
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                onOpenAddModal={() => setIsAddModalOpen(true)}
+                activeView="grid"
+                onViewChange={(view) => setMobileTab(view === 'today' ? 'today' : 'grid')}
+              />
+            </div>
+          )}
 
-        {/* Unified Monthly Analysis & Performance Section */}
-        <div id="analytics-section" className="space-y-4 pt-2">
-          <div className="flex items-center gap-2 px-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
-            <h3 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
-              Monthly Analytics & Performance
-            </h3>
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700/60">
-              {monthName}
-            </span>
-          </div>
+          {/* Stats Tab: High-impact monthly analytics & charts */}
+          {mobileTab === 'stats' && (
+            <div className="space-y-3.5 animate-fade-in">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
+                  <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                    Monthly Performance
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700/60">
+                  {monthName} {currentDate.getFullYear()}
+                </span>
+              </div>
 
-          {/* 4 Unified KPI Performance Cards */}
-          <HabitStats summary={summary} monthName={monthName} />
+              {/* 4 KPI Cards */}
+              <HabitStats summary={summary} monthName={monthName} />
 
-          {/* Analytics Line & Bar Charts */}
-          <HabitChart days={days} habits={filteredHabits} />
+              {/* Analytics Line & Bar Charts */}
+              <HabitChart days={days} habits={filteredHabits} />
+
+              {/* Sync Status Badge */}
+              <div className="bg-white dark:bg-[#0f1422] rounded-xl p-3 border border-slate-200/90 dark:border-slate-800/90 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between gap-2 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="leading-tight">
+                    {user ? 'Cloud & Local sync active' : 'Local storage auto-saved'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+                  Secured
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Pro-Tips & Footer Notes */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs transition-colors duration-200">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>
-              <strong className="text-slate-700 dark:text-slate-200">{user ? 'Cloud & Local Auto-Save:' : 'Local Auto-Save:'}</strong>{' '}
-              {user
-                ? 'Your habits and check-ins are synced to your cloud account and stored locally.'
-                : 'Your habits and check-ins are saved in your browser. Sign in to sync across devices!'}
-            </span>
+        {/* ─────────────────────────────────────────────────────────────
+            DESKTOP FULL DASHBOARD (>= sm: rich spreadsheet + stats)
+        ───────────────────────────────────────────────────────────── */}
+        <div className="hidden sm:block space-y-5">
+          {/* Personalized Greeting Banner — only shown when logged in */}
+          {user && <GreetingBanner user={user} />}
+
+          {/* Interactive Spreadsheet Habit Grid (Centerpiece / Main action) */}
+          <HabitGrid
+            habits={filteredHabits}
+            days={days}
+            onToggleHabit={handleToggleHabit}
+            onDeleteHabit={handleDeleteHabit}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onOpenAddModal={() => setIsAddModalOpen(true)}
+          />
+
+          {/* Unified Monthly Analysis & Performance Section */}
+          <div id="analytics-section" className="space-y-4 pt-2">
+            <div className="flex items-center gap-2 px-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                Monthly Analytics & Performance
+              </h3>
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700/60">
+                {monthName}
+              </span>
+            </div>
+
+            {/* 4 Unified KPI Performance Cards */}
+            <HabitStats summary={summary} monthName={monthName} />
+
+            {/* Analytics Line & Bar Charts */}
+            <HabitChart days={days} habits={filteredHabits} />
           </div>
-          <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500">
-            <span className="flex items-center gap-1">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-              Monthly Tracker
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              Live Streak Tracking
-            </span>
+
+          {/* Pro-Tips & Footer Notes */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs transition-colors duration-200">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>
+                <strong className="text-slate-700 dark:text-slate-200">{user ? 'Cloud & Local Auto-Save:' : 'Local Auto-Save:'}</strong>{' '}
+                {user
+                  ? 'Your habits and check-ins are synced to your cloud account and stored locally.'
+                  : 'Your habits and check-ins are saved in your browser. Sign in to sync across devices!'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500">
+              <span className="flex items-center gap-1">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                Monthly Tracker
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                Live Streak Tracking
+              </span>
+            </div>
           </div>
         </div>
       </main>
@@ -565,10 +647,7 @@ export default function App() {
         activeTab={mobileTab}
         onTabChange={(tab) => {
           setMobileTab(tab);
-          if (tab === 'stats') {
-            const statsEl = document.getElementById('analytics-section');
-            statsEl?.scrollIntoView({ behavior: 'smooth' });
-          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         todayCompletedCount={todayCompletedCount}

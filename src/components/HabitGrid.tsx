@@ -1,6 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Check, Trash2, Flame, Calendar, ListChecks, ArrowRight, Lock, Unlock, Plus } from 'lucide-react';
+import {
+  Check,
+  Trash2,
+  Flame,
+  ListChecks,
+  Lock,
+  Unlock,
+  Plus,
+  LayoutGrid,
+  Table2,
+  Target,
+} from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
 import { CalendarDay, calculateHabitStreak } from '../utils/dateUtils';
 
@@ -13,9 +24,11 @@ interface HabitGridProps {
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   onOpenAddModal: () => void;
-  activeView?: 'grid' | 'today';
-  onViewChange?: (view: 'grid' | 'today') => void;
+  activeView?: 'today' | 'cards' | 'table' | 'grid';
+  onViewChange?: (view: 'today' | 'cards' | 'table' | 'grid') => void;
 }
+
+export type HabitViewMode = 'today' | 'cards' | 'table';
 
 const ACCOUNTABILITY_LOCK_KEY = 'daybit_accountability_lock_v1';
 
@@ -31,19 +44,58 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   activeView: controlledActiveView,
   onViewChange,
 }) => {
-  // Mobile view switcher: defaults to 'today' on phones (<640px), 'grid' on desktop
-  const [internalView, setInternalView] = useState<'grid' | 'today'>(() => {
+  // Saved format preference for monthly tracking: 'cards' or 'table'
+  const [gridFormat, setGridFormat] = useState<'cards' | 'table'>(() => {
+    try {
+      const saved = localStorage.getItem('daybit_grid_format_preference');
+      if (saved === 'cards' || saved === 'table') return saved;
+    } catch {
+      // ignore
+    }
+    return 'cards';
+  });
+
+  // Internal active view: defaults to 'today' on phones (<640px) or saved preference on desktop
+  const [internalView, setInternalView] = useState<HabitViewMode>(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 640) {
       return 'today';
     }
-    return 'grid';
+    try {
+      const saved = localStorage.getItem('daybit_active_view');
+      if (saved === 'today' || saved === 'cards' || saved === 'table') return saved;
+    } catch {
+      // ignore
+    }
+    return 'cards';
   });
 
-  const activeView = controlledActiveView ?? internalView;
+  // Resolve current effective view
+  const effectiveView: HabitViewMode = (() => {
+    if (controlledActiveView) {
+      if (controlledActiveView === 'grid') return gridFormat;
+      return controlledActiveView;
+    }
+    return internalView;
+  })();
 
-  const handleViewChange = (v: 'grid' | 'today') => {
-    if (onViewChange) onViewChange(v);
-    setInternalView(v);
+  const handleSelectView = (view: HabitViewMode) => {
+    setInternalView(view);
+    if (view === 'cards' || view === 'table') {
+      setGridFormat(view);
+      try {
+        localStorage.setItem('daybit_grid_format_preference', view);
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      localStorage.setItem('daybit_active_view', view);
+    } catch {
+      // ignore
+    }
+    if (onViewChange) {
+      onViewChange(view);
+    }
   };
 
   // Accountability Lock state: when true, only today's habits can be edited
@@ -74,26 +126,48 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   // Today day object if current month contains today
   const todayDay = days.find((d) => d.isToday);
 
+  // Scroll centering state: true when Today is within viewport center, false when user scrolled away
+  const [isTodayCentered, setIsTodayCentered] = useState<boolean>(true);
+
+  // Check whether Today column is currently centered in the table container
+  const checkIsTodayCentered = () => {
+    if (todayThRef.current && tableContainerRef.current) {
+      const container = tableContainerRef.current;
+      const todayEl = todayThRef.current;
+      const stickyColWidth = window.innerWidth < 640 ? 210 : 280;
+      const targetScroll = Math.max(
+        0,
+        todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2
+      );
+      const isClose = Math.abs(container.scrollLeft - targetScroll) < 45;
+      setIsTodayCentered(isClose);
+    }
+  };
+
   // Function to smoothly scroll table to the 'Today' column
   const scrollToToday = (behavior: ScrollBehavior = 'smooth') => {
     if (todayThRef.current && tableContainerRef.current) {
       const container = tableContainerRef.current;
       const todayEl = todayThRef.current;
-      const stickyColWidth = window.innerWidth < 640 ? 140 : 280;
-      const targetScroll = todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2;
-      container.scrollTo({ left: Math.max(0, targetScroll), behavior });
+      const stickyColWidth = window.innerWidth < 640 ? 210 : 280;
+      const targetScroll = Math.max(
+        0,
+        todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2
+      );
+      container.scrollTo({ left: targetScroll, behavior });
+      setIsTodayCentered(true);
     }
   };
 
   // Auto-scroll to today column when mounted or month changes
   useEffect(() => {
-    if (todayDay && activeView === 'grid') {
+    if (todayDay && effectiveView === 'table') {
       const timer = setTimeout(() => {
         scrollToToday('smooth');
       }, 250);
       return () => clearTimeout(timer);
     }
-  }, [days, todayDay, activeView]);
+  }, [days, todayDay, effectiveView]);
 
   // Handle checking a cell with strict accountability checks
   const handleCellClick = (habitId: string, day: CalendarDay, isCurrentlyChecked: boolean) => {
@@ -152,53 +226,167 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
     <div className="bg-white dark:bg-[#0f1422] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden transition-colors duration-200">
       
       {/* ─────────────────────────────────────────────────────────────
+      {/* ─────────────────────────────────────────────────────────────
           STREAMLINED GRID TOOLBAR (VIEW SWITCHER + CATEGORIES + LOCK)
       ───────────────────────────────────────────────────────────── */}
-      <div className="bg-slate-50/90 dark:bg-slate-900/90 px-3 sm:px-4 py-2 border-b border-slate-200/80 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-        
-        {/* Left: View Switcher Tabs + Inline Category Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* View Switcher Tabs: Grid vs Today */}
-          <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-950/80 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
-            <button
-              onClick={() => handleViewChange('grid')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
-                activeView === 'grid'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Grid</span>
-            </button>
-            <button
-              onClick={() => handleViewChange('today')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
-                activeView === 'today'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <ListChecks className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Today</span>
-              {todayDay && (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
-                  {todayCompletedCount}/{habits.length}
-                </span>
-              )}
-            </button>
+      <div className="bg-slate-50/90 dark:bg-slate-900/90 border-b border-slate-200/80 dark:border-slate-800/80 text-xs">
+        {/* Desktop Toolbar (>= sm) */}
+        <div className="hidden sm:flex items-center justify-between gap-3 px-4 py-2">
+          {/* Left: 1-Click View Switcher (Today, Cards, Table) + Inline Category Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Unified 3-Way Segmented Control */}
+            <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-950/80 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
+              {/* 1. Today Checklist Button */}
+              <button
+                type="button"
+                onClick={() => handleSelectView('today')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
+                  effectiveView === 'today'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Today's Daily Ritual Checklist"
+              >
+                <ListChecks className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Today</span>
+                {todayDay && (
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300">
+                    {todayCompletedCount}/{habits.length}
+                  </span>
+                )}
+              </button>
+
+              {/* 2. Cards View Button */}
+              <button
+                type="button"
+                onClick={() => handleSelectView('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
+                  effectiveView === 'cards'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Card View (Monthly Heatmap Streaks)"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards</span>
+              </button>
+
+              {/* 3. Table View Button */}
+              <button
+                type="button"
+                onClick={() => handleSelectView('table')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs transition-all duration-150 cursor-pointer ${
+                  effectiveView === 'table'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Spreadsheet Table View"
+              >
+                <Table2 className="w-3.5 h-3.5" />
+                <span>Table</span>
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
+
+            {/* Inline Category Filter Chips */}
+            <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none touch-pan-x">
+              <button
+                onClick={() => onSelectCategory('all')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                  selectedCategory === 'all'
+                    ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-2xs'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => onSelectCategory(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="hidden sm:block h-4 w-px bg-slate-200 dark:bg-slate-800" />
+          {/* Right: Accountability Lock Button & Quick Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleLock}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs ${
+                isLocked
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800/70 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40'
+                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-800/70 hover:bg-amber-100/80 dark:hover:bg-amber-900/40'
+              }`}
+              title={
+                isLocked
+                  ? 'Currently Locked: Only today is editable. Click to unlock past days.'
+                  : 'Currently Unlocked: Past days can be edited. Click to lock.'
+              }
+            >
+              {isLocked ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-bold">Locked</span>
+                  <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">
+                    (Today Only)
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="font-bold">Unlocked</span>
+                  <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium">
+                    (Edit Past)
+                  </span>
+                </>
+              )}
+            </button>
 
-          {/* Inline Category Filter Chips */}
-          <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none touch-pan-x">
+            {todayDay && effectiveView === 'table' && (
+              <button
+                type="button"
+                onClick={() => scrollToToday('smooth')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer ${
+                  !isTodayCentered
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80'
+                }`}
+                title={
+                  !isTodayCentered
+                    ? `Click to center Today (${todayDay.dayOfWeek}, ${todayDay.dateStr})`
+                    : `Today (${todayDay.dayOfWeek}, ${todayDay.dateStr}) is centered`
+                }
+              >
+                <Target
+                  className={`w-3.5 h-3.5 ${
+                    !isTodayCentered ? 'text-white' : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                />
+                <span>Today</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Toolbar (< sm) */}
+        <div className="flex sm:hidden flex-col gap-2 p-2.5">
+          {/* Scrollable Category Chips Ribbon (Never wraps!) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none touch-pan-x py-0.5">
             <button
               onClick={() => onSelectCategory('all')}
-              className={`px-2 py-0.5 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer ${
                 selectedCategory === 'all'
-                  ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-2xs'
-                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
               }`}
             >
               All
@@ -207,62 +395,79 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
               <button
                 key={cat}
                 onClick={() => onSelectCategory(cat)}
-                className={`px-2 py-0.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 shrink-0 cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-emerald-600 text-white shadow-2xs font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Right: Accountability Lock Button & Quick Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Accountability Lock Button */}
-          <button
-            onClick={toggleLock}
-            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 active:scale-95 cursor-pointer border shadow-2xs ${
-              isLocked
-                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800/70 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40'
-                : 'bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-800/70 hover:bg-amber-100/80 dark:hover:bg-amber-900/40'
-            }`}
-            title={
-              isLocked
-                ? 'Currently Locked: Only today is editable. Click to unlock past days.'
-                : 'Currently Unlocked: Past days can be edited. Click to lock.'
-            }
-          >
-            {isLocked ? (
-              <>
-                <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="font-bold">Locked</span>
-                <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium hidden xs:inline">
-                  (Today Only)
-                </span>
-              </>
-            ) : (
-              <>
-                <Unlock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span className="font-bold">Unlocked</span>
-                <span className="text-[10px] text-amber-700/80 dark:text-amber-300/80 font-medium hidden xs:inline">
-                  (Edit Past)
-                </span>
-              </>
-            )}
-          </button>
+          {/* Sub-row for Month view on mobile: Format Switcher + Lock + Today */}
+          {effectiveView !== 'today' && (
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+              {/* Cards vs Table format switch */}
+              <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => handleSelectView('cards')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    effectiveView === 'cards'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                  title="Card View"
+                >
+                  <LayoutGrid className="w-3 h-3" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectView('table')}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    effectiveView === 'table'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                  title="Spreadsheet Table View"
+                >
+                  <Table2 className="w-3 h-3" />
+                  <span>Table</span>
+                </button>
+              </div>
 
-          {todayDay && activeView === 'grid' && (
-            <button
-              onClick={() => scrollToToday('smooth')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/80 transition-all active:scale-95 cursor-pointer"
-              title="Scroll directly to today's column"
-            >
-              <ArrowRight className="w-3 h-3" />
-              <span className="hidden xs:inline">Today</span>
-            </button>
+              {/* Right: Today Centering + Lock Toggle */}
+              <div className="flex items-center gap-1.5">
+                {todayDay && effectiveView === 'table' && !isTodayCentered && (
+                  <button
+                    type="button"
+                    onClick={() => scrollToToday('smooth')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all active:scale-95 cursor-pointer animate-fade-in"
+                    title="Click to center Today"
+                  >
+                    <Target className="w-3 h-3 text-white" />
+                    <span>Today</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={toggleLock}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                    isLocked
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800'
+                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-800'
+                  }`}
+                  title={isLocked ? 'Only today editable' : 'Past days editable'}
+                >
+                  {isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                  <span>{isLocked ? 'Locked' : 'Unlocked'}</span>
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -270,114 +475,173 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
       {/* ─────────────────────────────────────────────────────────────
           MODE A: TODAY'S DAILY CHECKLIST VIEW (MOBILE-FIRST)
       ───────────────────────────────────────────────────────────── */}
-      {activeView === 'today' ? (
-        <div className="px-4 sm:px-6 pt-4 pb-6 space-y-2">
+      {effectiveView === 'today' ? (
+        <div className="p-3.5 sm:p-6 space-y-3">
           {todayDay ? (
             <>
-              {/* Ultra-minimal header */}
-              <div className="flex items-center justify-between pb-2">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {todayDay.fullDayName} · {todayDay.dateStr}
-                  </p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-0.5">
-                    {todayCompletedCount === habits.length && habits.length > 0
-                      ? '🎉 All done!'
-                      : `${habits.length - todayCompletedCount} left today`}
-                  </p>
+              {/* Daily Hero Banner */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-transparent border border-emerald-500/20 dark:border-emerald-800/40 p-4 sm:p-5 shadow-xs">
+                <div className="flex items-center justify-between gap-3 mb-2.5">
+                  <div>
+                    <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                      {todayDay.fullDayName} · {todayDay.dateStr}
+                    </p>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">
+                      {todayCompletedCount === habits.length && habits.length > 0
+                        ? '🎉 All Done Today!'
+                        : `${habits.length - todayCompletedCount} habits remaining`}
+                    </h3>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                      {habits.length > 0 ? Math.round((todayCompletedCount / habits.length) * 100) : 0}%
+                    </span>
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      {todayCompletedCount} of {habits.length} done
+                    </p>
+                  </div>
                 </div>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-colors ${
-                  todayCompletedCount === habits.length && habits.length > 0
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                }`}>
-                  {todayCompletedCount} / {habits.length}
-                </span>
+
+                {/* Smooth Progress Bar */}
+                <div className="w-full bg-slate-200/80 dark:bg-slate-800/80 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500 ease-out shadow-xs shadow-emerald-500/50"
+                    style={{
+                      width: `${habits.length > 0 ? Math.round((todayCompletedCount / habits.length) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* Habit list */}
+              {/* Habit Cards */}
               {habits.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
-                  No habits yet. Click <strong>"New Habit"</strong> to start!
+                <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-sm">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No habits yet</p>
+                  <p className="text-xs mb-3">Tap "+ Add Habit" to start building your routine!</p>
+                  <button
+                    onClick={onOpenAddModal}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer shadow-sm shadow-emerald-600/30"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Your First Habit</span>
+                  </button>
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2.5">
                   {habits.map((habit) => {
                     const isChecked = Boolean(habit.completions[todayDay.dateStr]);
                     const streak = calculateHabitStreak(habit.completions);
+                    const completedDaysInMonth = days.filter((d) => habit.completions[d.dateStr]).length;
+                    const target = habit.targetPerMonth || days.length;
 
                     return (
                       <div
                         key={`today-card-${habit.id}`}
                         onClick={() => handleCellClick(habit.id, todayDay, isChecked)}
-                        className={`group flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-200 cursor-pointer select-none active:scale-[0.985] ${
+                        className={`group relative flex items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${
                           isChecked
-                            ? 'bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 opacity-60'
-                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm'
+                            ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60 opacity-80'
+                            : 'bg-white dark:bg-[#121829] border-slate-200 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 shadow-xs hover:shadow-md'
                         }`}
                       >
-                        {/* Circle Checkbox */}
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${
-                            isChecked ? 'scale-110' : 'border-2 border-slate-300 dark:border-slate-600'
-                          }`}
-                          style={isChecked ? {
-                            backgroundColor: habit.color,
-                            boxShadow: `0 0 0 3px ${habit.color}22, 0 2px 8px ${habit.color}40`,
-                          } : undefined}
-                        >
-                          {isChecked && (
-                            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
+                        {/* Left: Checkbox + Emoji + Name & Category */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {/* Circle Checkbox */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCellClick(habit.id, todayDay, isChecked);
+                            }}
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer ${
+                              isChecked
+                                ? 'scale-105'
+                                : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400'
+                            }`}
+                            style={
+                              isChecked
+                                ? {
+                                    backgroundColor: habit.color,
+                                    boxShadow: `0 0 0 3px ${habit.color}25, 0 2px 10px ${habit.color}40`,
+                                  }
+                                : undefined
+                            }
+                            title={isChecked ? 'Mark pending' : 'Mark completed'}
+                            aria-label={`Toggle habit ${habit.name}`}
+                          >
+                            {isChecked && (
+                              <Check className="w-4 h-4 text-white stroke-[3.5]" />
+                            )}
+                          </button>
+
+                          {/* Emoji in squircle */}
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-transform group-hover:scale-105 shadow-2xs"
+                            style={{
+                              backgroundColor: `${habit.color}15`,
+                              border: `1px solid ${habit.color}35`,
+                            }}
+                          >
+                            {habit.emoji}
+                          </div>
+
+                          {/* Title & Metadata */}
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-sm sm:text-base font-bold transition-all duration-200 leading-snug break-words ${
+                                isChecked
+                                  ? 'line-through text-slate-400 dark:text-slate-500 font-medium'
+                                  : 'text-slate-900 dark:text-white'
+                              }`}
+                            >
+                              {habit.name}
+                            </p>
+
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              {/* Category tag */}
+                              <span
+                                className="inline-block text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"
+                                style={{
+                                  color: habit.color,
+                                  backgroundColor: `${habit.color}18`,
+                                }}
+                              >
+                                {habit.category}
+                              </span>
+
+                              {/* Monthly progress */}
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap">
+                                {completedDaysInMonth}/{target}d
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Emoji */}
-                        <span className="text-base shrink-0 select-none">{habit.emoji}</span>
+                        {/* Right: Streak & Delete Action */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {streak.current > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
+                              <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                              <span>{streak.current}d</span>
+                            </span>
+                          )}
 
-                        {/* Name */}
-                        <span className={`flex-1 text-sm font-medium truncate transition-all duration-200 ${
-                          isChecked
-                            ? 'line-through text-slate-400 dark:text-slate-500'
-                            : 'text-slate-800 dark:text-slate-100'
-                        }`}>
-                          {habit.name}
-                        </span>
-
-                        {/* Streak — only if > 0, very compact */}
-                        {streak.current > 0 && !isChecked && (
-                          <span className="flex items-center gap-0.5 text-[11px] font-semibold text-amber-500 shrink-0">
-                            <Flame className="w-3 h-3 fill-amber-500 shrink-0" />
-                            {streak.current}
-                          </span>
-                        )}
-
-                        {/* Category — visible on desktop hover only */}
-                        {!isChecked && (
-                          <span
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-                            style={{ color: habit.color, backgroundColor: `${habit.color}15` }}
+                          {/* Delete habit action */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete "${habit.name}"?`)) {
+                                onDeleteHabit(habit.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all cursor-pointer"
+                            title="Delete habit"
+                            aria-label="Delete habit"
                           >
-                            {habit.category}
-                          </span>
-                        )}
-
-                        {/* Delete — hover only */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete "${habit.name}"?`)) {
-                              onDeleteHabit(habit.id);
-                            }
-                          }}
-                          className="p-1 rounded-lg text-transparent group-hover:text-slate-300 dark:group-hover:text-slate-600 hover:!text-rose-500 dark:hover:!text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all shrink-0 cursor-pointer"
-                          title="Delete habit"
-                          aria-label="Delete habit"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -385,44 +649,187 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
               )}
             </>
           ) : (
-            <div className="text-center py-10 text-slate-500 dark:text-slate-400 text-sm">
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm">
               The currently selected month does not contain today's date.
             </div>
           )}
         </div>
-      ) : (
+      ) : effectiveView === 'cards' ? (
         /* ─────────────────────────────────────────────────────────────
-            MODE B: SPREADSHEET HORIZONTAL GRID (RESPONSIVE TABLE)
+            MODE B: MONTHLY TRACKER (STREAK MATRIX CARDS)
         ───────────────────────────────────────────────────────────── */
-        <div ref={tableContainerRef} className="overflow-x-auto relative scrollbar-thin touch-pan-x">
-          <table className="w-full border-collapse text-left text-xs">
-            {/* Table Header: Column headers & Dates */}
-            <thead>
-              <tr className="bg-slate-100/90 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 border-b border-slate-200/90 dark:border-slate-800 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
-                
-                {/* Sticky Column: Contains "+ Add Habit" button (like reference app "+ Add New Thing") */}
-                <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 px-2 sm:px-3 py-2 min-w-[125px] sm:min-w-[270px] max-w-[130px] sm:max-w-none font-semibold text-slate-700 dark:text-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      onClick={onOpenAddModal}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 shadow-xs transition-all cursor-pointer"
-                      title="Create a new habit"
+        <div className="p-3.5 sm:p-5">
+              {habits.length === 0 ? (
+                <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-sm">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No habits found</p>
+                  <p className="text-xs mb-3">Add habits to track your monthly progress!</p>
+                  <button
+                    onClick={onOpenAddModal}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer shadow-sm shadow-emerald-600/30"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Habit</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+                  {habits.map((habit) => {
+                  const completedDaysInMonth = days.filter((d) => habit.completions[d.dateStr]).length;
+                  const target = habit.targetPerMonth || days.length;
+                  const streak = calculateHabitStreak(habit.completions);
+                  const completionPercentage = Math.min(Math.round((completedDaysInMonth / target) * 100), 100);
+
+                  return (
+                    <div
+                      key={`matrix-card-${habit.id}`}
+                      className="bg-white dark:bg-[#121829] rounded-2xl border border-slate-200 dark:border-slate-800/90 p-3.5 shadow-xs space-y-3"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Habit</span>
-                    </button>
-                    <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold hidden sm:inline">
-                      {habits.length} habits
-                    </span>
-                  </div>
-                </th>
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-2xs"
+                            style={{
+                              backgroundColor: `${habit.color}15`,
+                              border: `1px solid ${habit.color}35`,
+                            }}
+                          >
+                            {habit.emoji}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white break-words leading-snug">
+                              {habit.name}
+                            </h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span
+                                className="text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"
+                                style={{
+                                  color: habit.color,
+                                  backgroundColor: `${habit.color}18`,
+                                }}
+                              >
+                                {habit.category}
+                              </span>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap">
+                                {completedDaysInMonth}/{target}d ({completionPercentage}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Streak & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {streak.current > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
+                              <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
+                              <span>{streak.current}d</span>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete "${habit.name}"?`)) {
+                                onDeleteHabit(habit.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all cursor-pointer"
+                            title="Delete habit"
+                            aria-label="Delete habit"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Visual Month Heatmap Grid: 7 days per row */}
+                      <div className="grid grid-cols-7 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                        {days.map((day) => {
+                          const isChecked = Boolean(habit.completions[day.dateStr]);
+                          const isCellDisabled = day.isFuture || (isLocked && !day.isToday);
+
+                          return (
+                            <button
+                              type="button"
+                              key={`grid-cell-${habit.id}-${day.dateStr}`}
+                              onClick={() => handleCellClick(habit.id, day, isChecked)}
+                              disabled={isCellDisabled}
+                              className={`h-9 rounded-xl flex flex-col items-center justify-center transition-all duration-150 cursor-pointer relative select-none ${
+                                isChecked
+                                  ? 'text-white shadow-xs font-black'
+                                  : isCellDisabled
+                                  ? 'bg-slate-50/60 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600 border border-slate-100/60 dark:border-slate-800/40 cursor-not-allowed'
+                                  : day.isToday
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500 font-extrabold'
+                                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold'
+                              }`}
+                              style={
+                                isChecked
+                                  ? {
+                                      backgroundColor: habit.color,
+                                      boxShadow: `0 2px 6px ${habit.color}40`,
+                                    }
+                                  : undefined
+                              }
+                              title={`${habit.name} on ${day.dayOfWeek}, ${day.dateStr}: ${isChecked ? 'Completed' : 'Pending'}`}
+                            >
+                              <span className="text-[8px] uppercase tracking-tighter opacity-70 leading-none">
+                                {day.dayOfWeek[0]}
+                              </span>
+                              <span className="text-[11px] font-bold leading-tight mt-0.5">
+                                {day.dayNumber}
+                              </span>
+                              {day.isToday && !isChecked && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-slate-900" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+        /* ─────────────────────────────────────────────────────────────
+            MODE C: FULL SPREADSHEET TABLE VIEW
+        ───────────────────────────────────────────────────────────── */
+        <div
+          ref={tableContainerRef}
+          onScroll={checkIsTodayCentered}
+          className="overflow-x-auto relative scrollbar-thin touch-pan-x block"
+        >
+            <table className="w-full border-collapse text-left text-xs">
+              {/* Table Header: Column headers & Dates */}
+              <thead>
+                <tr className="bg-slate-100/90 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 border-b border-slate-200/90 dark:border-slate-800 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
+                  
+                  {/* Sticky Column: Contains "+ Add Habit" button */}
+                  <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none font-semibold text-slate-700 dark:text-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        onClick={onOpenAddModal}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 shadow-xs transition-all cursor-pointer"
+                        title="Create a new habit"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span className="hidden xs:inline">Add Habit</span>
+                        <span className="xs:hidden">Add</span>
+                      </button>
+                      <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold hidden sm:inline">
+                        {habits.length} habits
+                      </span>
+                    </div>
+                  </th>
 
                 {/* Day Columns (High-Density 2-Tier Header, with solid pill on Today) */}
                 {days.map((day) => (
                   <th
                     key={day.dateStr}
                     ref={day.isToday ? todayThRef : undefined}
-                    className={`px-0.5 py-1 text-center min-w-[34px] sm:min-w-[38px] max-w-[40px] transition-colors ${
+                    className={`px-1 pt-1.5 pb-1 text-center min-w-[36px] sm:min-w-[38px] max-w-[42px] transition-colors ${
                       day.isToday
                         ? 'bg-emerald-50/70 dark:bg-emerald-950/40'
                         : day.isWeekend
@@ -433,8 +840,8 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                   >
                     <div className="flex flex-col items-center justify-center">
                       {day.isToday ? (
-                        <div className="w-full py-0.5 px-0.5 rounded-lg bg-emerald-600 text-white shadow-xs flex flex-col items-center">
-                          <span className="text-[8px] uppercase font-bold tracking-tight leading-none text-emerald-100">
+                        <div className="w-full py-1 px-0.5 rounded-lg bg-emerald-600 text-white shadow-xs flex flex-col items-center">
+                          <span className="text-[9px] uppercase font-bold tracking-tight leading-normal text-emerald-100">
                             {day.dayOfWeek}
                           </span>
                           <span className="text-xs font-black leading-tight mt-0.5">
@@ -444,7 +851,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       ) : (
                         <>
                           <span
-                            className={`text-[8px] uppercase tracking-tight leading-none ${
+                            className={`text-[9px] uppercase tracking-tight leading-normal ${
                               day.isWeekend
                                 ? 'text-slate-500 dark:text-slate-400 font-bold'
                                 : 'text-slate-400 dark:text-slate-500 font-medium'
@@ -504,7 +911,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group"
                     >
                       {/* Sticky Habit Label Cell */}
-                      <td className="sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 min-w-[125px] sm:min-w-[270px] max-w-[130px] sm:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
+                      <td className="sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
                         <div className="flex items-center space-x-2 sm:space-x-2.5">
                           <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] w-3.5 text-right font-medium hidden sm:inline-block">
                             {rowIndex + 1}
@@ -516,12 +923,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                             {habit.emoji}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-slate-900 dark:text-white truncate text-xs leading-snug">
+                            <p className="font-bold text-slate-900 dark:text-white text-xs leading-snug break-words">
                               {habit.name}
                             </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span
-                                className="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded-full"
+                                className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-md"
                                 style={{
                                   color: habit.color,
                                   backgroundColor: `${habit.color}18`,
@@ -546,7 +953,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                           <td
                             key={day.dateStr}
                             onClick={() => handleCellClick(habit.id, day, isChecked)}
-                            className={`p-0 text-center select-none transition-colors duration-150 ease-in-out ${
+                            className={`p-0 text-center select-none transition-colors ${
                               isCellDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
                             } ${
                               day.isToday
@@ -738,19 +1145,6 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Floating Jump to Today shortcut on mobile when viewing spreadsheet grid */}
-      {activeView === 'grid' && todayDay && (
-        <button
-          type="button"
-          onClick={() => scrollToToday('smooth')}
-          className="fixed bottom-20 right-4 z-30 sm:hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-600/35 active:scale-95 transition-all cursor-pointer"
-          title="Jump to today's column"
-        >
-          <ArrowRight className="w-3.5 h-3.5" />
-          <span>Today</span>
-        </button>
       )}
     </div>
   );

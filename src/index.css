@@ -28,10 +28,19 @@
 
 /* Safe area padding utilities for mobile phones */
 .pb-safe {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
 }
 .pt-safe {
   padding-top: max(env(safe-area-inset-top, 0px), 8px);
+}
+
+/* Eliminate tap delays and rubber banding on mobile */
+button, a, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
+}
+
+html {
+  overscroll-behavior-y: none;
 }
 
 /* Native View Transitions API for theme expansion */
