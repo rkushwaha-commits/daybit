@@ -144,3 +144,18 @@ html.theme-transitioning *::after {
     scroll-behavior: auto !important;
   }
 }
+
+/* Suppress injected Netlify preview drawers, feedback pills, and badges */
+[data-netlify-deploy-preview],
+[class*="netlify-feedback"],
+#netlify-badge,
+.netlify-badge,
+netlify-drawer,
+#netlify-preview-drawer,
+iframe#netlify-identity-widget,
+div[data-testid="netlify-drawer"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
