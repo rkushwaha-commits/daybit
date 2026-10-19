@@ -148,14 +148,21 @@ html.theme-transitioning *::after {
 /* Suppress injected Netlify preview drawers, feedback pills, and badges */
 [data-netlify-deploy-preview],
 [class*="netlify-feedback"],
+[class*="netlify-drawer"],
 #netlify-badge,
 .netlify-badge,
 netlify-drawer,
 #netlify-preview-drawer,
 iframe#netlify-identity-widget,
-div[data-testid="netlify-drawer"] {
+div[data-testid="netlify-drawer"],
+[data-netlify-preview],
+div[class*="feedback-drawer"],
+div[class*="FeedbackDrawer"],
+div[style*="2147483647"] {
   display: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
   pointer-events: none !important;
 }
+
 
