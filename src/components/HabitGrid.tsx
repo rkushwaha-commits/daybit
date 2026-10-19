@@ -271,122 +271,112 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
           MODE A: TODAY'S DAILY CHECKLIST VIEW (MOBILE-FIRST)
       ───────────────────────────────────────────────────────────── */}
       {activeView === 'today' ? (
-        <div className="p-4 sm:p-6 space-y-3">
+        <div className="px-4 sm:px-6 pt-4 pb-6 space-y-2">
           {todayDay ? (
             <>
-              {/* Daily Progress Overview Banner */}
-              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-indigo-950/20 border border-emerald-500/20 rounded-xl p-3.5 flex items-center justify-between">
+              {/* Ultra-minimal header */}
+              <div className="flex items-center justify-between pb-2">
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Today's Progress • {todayDay.fullDayName}, {todayDay.dateStr}
-                  </h3>
-                  <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-0.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    {todayDay.fullDayName} · {todayDay.dateStr}
+                  </p>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-0.5">
                     {todayCompletedCount === habits.length && habits.length > 0
-                      ? '🎉 All habits completed for today! Awesome job!'
-                      : `${habits.length - todayCompletedCount} habit${habits.length - todayCompletedCount === 1 ? '' : 's'} remaining for today`}
+                      ? '🎉 All done!'
+                      : `${habits.length - todayCompletedCount} left today`}
                   </p>
                 </div>
-                <div className="text-right">
-                  <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                    {habits.length > 0 ? Math.round((todayCompletedCount / habits.length) * 100) : 0}%
-                  </span>
-                </div>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full border transition-colors ${
+                  todayCompletedCount === habits.length && habits.length > 0
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                }`}>
+                  {todayCompletedCount} / {habits.length}
+                </span>
               </div>
 
-              {/* Habit Cards for Today */}
+              {/* Habit list */}
               {habits.length === 0 ? (
                 <div className="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
-                  No habits found. Click <strong>"Add Habit"</strong> to start tracking!
+                  No habits yet. Click <strong>"New Habit"</strong> to start!
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                <div className="space-y-1.5">
                   {habits.map((habit) => {
                     const isChecked = Boolean(habit.completions[todayDay.dateStr]);
                     const streak = calculateHabitStreak(habit.completions);
-                    const completedDaysInMonth = days.filter((d) => habit.completions[d.dateStr]).length;
-                    const target = habit.targetPerMonth || days.length;
-                    const pct = Math.min(Math.round((completedDaysInMonth / target) * 100), 100);
 
                     return (
                       <div
                         key={`today-card-${habit.id}`}
                         onClick={() => handleCellClick(habit.id, todayDay, isChecked)}
-                        className={`p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-center gap-3.5 select-none active:scale-[0.99] ${
+                        className={`group flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-200 cursor-pointer select-none active:scale-[0.985] ${
                           isChecked
-                            ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300/80 dark:border-emerald-800/60 shadow-xs'
-                            : 'bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-2xs'
+                            ? 'bg-white dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 opacity-60'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm'
                         }`}
                       >
-                        {/* Big Touch-Friendly Checkbox */}
+                        {/* Circle Checkbox */}
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-150 ${
-                            isChecked
-                              ? 'text-white shadow-md'
-                              : 'border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800'
+                          className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${
+                            isChecked ? 'scale-110' : 'border-2 border-slate-300 dark:border-slate-600'
                           }`}
-                          style={
-                            isChecked
-                              ? {
-                                  backgroundColor: habit.color,
-                                  boxShadow: `0 4px 12px ${habit.color}45`,
-                                }
-                              : undefined
-                          }
+                          style={isChecked ? {
+                            backgroundColor: habit.color,
+                            boxShadow: `0 0 0 3px ${habit.color}22, 0 2px 8px ${habit.color}40`,
+                          } : undefined}
                         >
-                          {isChecked && <Check className="w-5 h-5 stroke-[3]" />}
+                          {isChecked && (
+                            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
                         </div>
 
-                        {/* Habit Info */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-base select-none shrink-0">{habit.emoji}</span>
-                            <span
-                              className={`text-sm font-bold truncate ${
-                                isChecked
-                                  ? 'text-slate-900 dark:text-white line-through opacity-85'
-                                  : 'text-slate-800 dark:text-slate-100'
-                              }`}
-                            >
-                              {habit.name}
-                            </span>
-                          </div>
+                        {/* Emoji */}
+                        <span className="text-base shrink-0 select-none">{habit.emoji}</span>
 
-                          <div className="flex items-center gap-2 mt-1">
-                            <span
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                              style={{
-                                color: habit.color,
-                                backgroundColor: `${habit.color}18`,
-                              }}
-                            >
-                              {habit.category}
-                            </span>
-                            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
-                              {completedDaysInMonth}/{target}d ({pct}%)
-                            </span>
-                          </div>
-                        </div>
+                        {/* Name */}
+                        <span className={`flex-1 text-sm font-medium truncate transition-all duration-200 ${
+                          isChecked
+                            ? 'line-through text-slate-400 dark:text-slate-500'
+                            : 'text-slate-800 dark:text-slate-100'
+                        }`}>
+                          {habit.name}
+                        </span>
 
-                        {/* Streak Pill */}
-                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-700/60 shrink-0">
-                          <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                          <span>{streak.current}d</span>
-                        </div>
+                        {/* Streak — only if > 0, very compact */}
+                        {streak.current > 0 && !isChecked && (
+                          <span className="flex items-center gap-0.5 text-[11px] font-semibold text-amber-500 shrink-0">
+                            <Flame className="w-3 h-3 fill-amber-500 shrink-0" />
+                            {streak.current}
+                          </span>
+                        )}
 
-                        {/* Delete Habit Action (Phone & Desktop) */}
+                        {/* Category — visible on desktop hover only */}
+                        {!isChecked && (
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                            style={{ color: habit.color, backgroundColor: `${habit.color}15` }}
+                          >
+                            {habit.category}
+                          </span>
+                        )}
+
+                        {/* Delete — hover only */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(`Are you sure you want to delete "${habit.name}"?`)) {
+                            if (window.confirm(`Delete "${habit.name}"?`)) {
                               onDeleteHabit(habit.id);
                             }
                           }}
-                          className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all shrink-0 cursor-pointer"
+                          className="p-1 rounded-lg text-transparent group-hover:text-slate-300 dark:group-hover:text-slate-600 hover:!text-rose-500 dark:hover:!text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all shrink-0 cursor-pointer"
                           title="Delete habit"
                           aria-label="Delete habit"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     );

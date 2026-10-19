@@ -26,6 +26,7 @@ interface SetupScreenProps {
   onSaveHabits: (habits: Habit[]) => void;
   onComplete: () => void;
   onClose?: () => void;
+  initialError?: string | null;
 }
 
 // Crisp standard Google "G" SVG icon
@@ -59,10 +60,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   onSaveHabits,
   onComplete,
   onClose,
+  initialError,
 }) => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(initialError || null);
   const [fadeClass, setFadeClass] = useState('animate-fade-in');
 
   // Pre-populate selected habit IDs (defaults to top 3)

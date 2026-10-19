@@ -1,25 +1,36 @@
 import { createClient, User } from '@supabase/supabase-js';
 import { Habit } from '../types/habit';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const DEFAULT_SUPABASE_URL = 'https://sfmpfkzswawjodzilpes.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbXBma3pzd2F3am9kemlscGVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE4MjAzMjcsImV4cCI6MjEwNzM5NjMyN30.dNfvdZCSt9RaHw6JdjUH_hQsT8OR9LubOiZlCiKwSTw';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase URL or Anon Key is missing. Cloud sync will operate in offline/local mode.');
-}
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
-);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 // ── Authentication Helpers ──────────────────────────────────────────────────
 
 export const signInWithGoogle = async () => {
+  // Compute redirect URL based on current origin and path
+  const redirectUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}`.replace(/\/$/, '')
+    : undefined;
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: redirectUrl || window.location.origin,
+      queryParams: {
+        prompt: 'select_account',
+      },
     },
   });
   if (error) throw error;

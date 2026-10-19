@@ -10,7 +10,7 @@ import { AuthModal } from './components/AuthModal';
 import { AvatarPickerModal } from './components/AvatarPickerModal';
 import { DEFAULT_AVATAR_ID } from './data/avatars';
 import GreetingBanner from './components/GreetingBanner';
-import { Sparkles, FileSpreadsheet, ShieldCheck } from 'lucide-react';
+import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, Table2, AlertCircle, X } from 'lucide-react';
 import HabitChart from './components/HabitChart';
 import { SetupScreen } from './components/SetupScreen';
 import { MobileBottomBar } from './components/MobileBottomBar';
@@ -40,6 +40,15 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'today' | 'grid' | 'stats'>('today');
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const hasHash = window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
+      const hasCode = window.location.search.includes('code=');
+      return hasHash || hasCode;
+    }
+    return false;
+  });
+  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SETUP_STORAGE_KEY) === 'true';
@@ -187,9 +196,32 @@ export default function App() {
     }
   }, []);
 
-  // Subscribe to Supabase auth changes
+  // Subscribe to Supabase auth changes and handle OAuth return
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for error parameters in URL (from OAuth cancellation or misconfiguration)
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const queryParams = new URLSearchParams(window.location.search);
+      const errorDesc =
+        hashParams.get('error_description') ||
+        queryParams.get('error_description') ||
+        hashParams.get('error') ||
+        queryParams.get('error');
+
+      if (errorDesc) {
+        console.error('OAuth return error:', errorDesc);
+        setAuthBannerError(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+        // Clean URL so the error param is not stuck on subsequent reloads
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setIsAuthChecking(false);
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      setIsAuthChecking(false);
+      if (error) {
+        console.warn('Error fetching Supabase session:', error.message);
+      }
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -203,7 +235,8 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthChecking(false);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -214,6 +247,13 @@ export default function App() {
           // ignore
         }
         loadAndSyncUserHabits(currentUser.id);
+      }
+
+      // Clean up hash/code from address bar once signed in
+      if (event === 'SIGNED_IN' && typeof window !== 'undefined') {
+        if (window.location.hash || window.location.search.includes('code=')) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       }
     });
 
@@ -377,6 +417,22 @@ export default function App() {
     }
   };
 
+  // Show smooth loading state while completing OAuth token exchange
+  if (isAuthChecking) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 p-4">
+        <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/25 mb-4 animate-pulse">
+          <Table2 className="h-6 w-6" />
+        </div>
+        <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+          <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+          <span>Signing in & syncing your habits...</span>
+        </div>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Connecting to Daybit Cloud</p>
+      </div>
+    );
+  }
+
   // Show Setup / Onboarding screen for first-time users or when opened manually
   if ((!isSetupComplete && !user) || isSetupOpen) {
     return (
@@ -392,12 +448,30 @@ export default function App() {
           setIsSetupOpen(false);
         }}
         onClose={isSetupComplete || user ? () => setIsSetupOpen(false) : undefined}
+        initialError={authBannerError}
       />
     );
   }
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col text-slate-800 dark:text-slate-100">
+      {/* OAuth Error Toast if triggered after setup complete */}
+      {authBannerError && (
+        <div className="sticky top-0 z-50 bg-rose-600 text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-medium shadow-md animate-fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Google Sign-In note: {authBannerError}</span>
+          </div>
+          <button
+            onClick={() => setAuthBannerError(null)}
+            className="p-1 rounded-md hover:bg-rose-700 active:scale-95 transition-all cursor-pointer"
+            aria-label="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Top Application Header with Integrated Month Navigation */}
       <Header
         searchQuery={searchQuery}
