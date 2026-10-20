@@ -14,7 +14,7 @@ import {
 import { signInWithGoogle } from '../lib/supabase';
 import { Theme } from '../hooks/useTheme';
 import { Habit } from '../types/habit';
-import { STARTER_HABIT_OPTIONS, buildHabitsFromStarterIds } from '../data/initialHabits';
+import { STARTER_HABIT_OPTIONS, buildHabitsFromStarterIds, DEFAULT_STARTER_HABIT_IDS } from '../data/initialHabits';
 import { AVATAR_PERSONAS } from '../data/avatars';
 
 interface SetupScreenProps {
@@ -67,15 +67,18 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(initialError || null);
   const [fadeClass, setFadeClass] = useState('animate-fade-in');
 
-  // Pre-populate selected habit IDs (defaults to top 3)
+  // Pre-populate selected habit IDs (defaults to 3 core foundational habits)
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>(() => {
     if (currentHabits && currentHabits.length > 0) {
       const existingStarterIds = currentHabits
         .map((h) => h.id)
         .filter((id) => STARTER_HABIT_OPTIONS.some((opt) => opt.id === id));
-      if (existingStarterIds.length > 0) return existingStarterIds;
+      // If user customized their selection (not simply all 7 starter options), preserve it
+      if (existingStarterIds.length > 0 && existingStarterIds.length < STARTER_HABIT_OPTIONS.length) {
+        return existingStarterIds;
+      }
     }
-    return ['h1', 'h2', 'h3']; // Water, Workout, Reading
+    return DEFAULT_STARTER_HABIT_IDS;
   });
 
   const changeStep = (nextStep: 1 | 2 | 3) => {

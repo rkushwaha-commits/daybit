@@ -97,7 +97,8 @@ export function buildHabitsFromStarterIds(selectedIds: string[]): Habit[] {
     }));
 }
 
+export const DEFAULT_STARTER_HABIT_IDS = ['h1', 'h2', 'h3'];
+
 export function getDefaultHabits(): Habit[] {
-  const allIds = STARTER_HABIT_OPTIONS.map((opt) => opt.id);
-  return buildHabitsFromStarterIds(allIds);
+  return buildHabitsFromStarterIds(DEFAULT_STARTER_HABIT_IDS);
 }
