@@ -14,6 +14,8 @@ import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, Table2, AlertCircle, X
 import HabitChart from './components/HabitChart';
 import { SetupScreen } from './components/SetupScreen';
 import { MobileBottomBar } from './components/MobileBottomBar';
+import { PWAInstallModal } from './components/PWAInstallModal';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -40,6 +42,15 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'today' | 'grid' | 'stats'>('today');
+
+  // ── PWA Installation Hook ──
+  const {
+    isStandalone,
+    isIOS,
+    promptInstall,
+    isIOSModalOpen,
+    setIsIOSModalOpen,
+  } = usePWAInstall();
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const hasHash = window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
@@ -495,6 +506,8 @@ export default function App() {
         selectedAvatarId={avatarId}
         onOpenAvatarPicker={() => setIsAvatarPickerOpen(true)}
         activeMobileTab={mobileTab}
+        onPromptInstall={promptInstall}
+        isStandalone={isStandalone}
       />
 
       {/* Main Content Area */}
@@ -676,6 +689,13 @@ export default function App() {
         selectedAvatarId={avatarId}
         onSelectAvatar={handleSelectAvatar}
         user={user}
+      />
+
+      {/* Modal for Installing App / Home Screen Guidance (PWA) */}
+      <PWAInstallModal
+        isOpen={isIOSModalOpen}
+        onClose={() => setIsIOSModalOpen(false)}
+        isIOS={isIOS}
       />
     </div>
   );

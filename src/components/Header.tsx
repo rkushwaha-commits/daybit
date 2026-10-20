@@ -16,6 +16,7 @@ import {
   Sparkles,
   MoreVertical,
   UserCircle2,
+  Download,
   X,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
@@ -45,6 +46,8 @@ interface HeaderProps {
   selectedAvatarId: string;
   onOpenAvatarPicker: () => void;
   activeMobileTab?: 'today' | 'grid' | 'stats';
+  onPromptInstall?: () => void;
+  isStandalone?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -69,6 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
   selectedAvatarId,
   onOpenAvatarPicker,
   activeMobileTab = 'today',
+  onPromptInstall,
+  isStandalone = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
   const avatarUrl = user?.user_metadata?.avatar_url;
@@ -206,6 +211,21 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Preferences</span>
                       </button>
+
+                      {/* Install App (PWA) */}
+                      {!isStandalone && onPromptInstall && (
+                        <button
+                          onClick={() => { setIsMobileMenuOpen(false); onPromptInstall(); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl cursor-pointer"
+                          role="menuitem"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Download className="w-4 h-4 text-emerald-500" />
+                            <span>Install App</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Free</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="p-1">
@@ -533,6 +553,21 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                       <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Preferences</span>
                     </button>
+
+                    {/* Install App (PWA) */}
+                    {!isStandalone && onPromptInstall && (
+                      <button
+                        onClick={() => { setIsDesktopMenuOpen(false); onPromptInstall(); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl cursor-pointer"
+                        role="menuitem"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Download className="w-4 h-4 text-emerald-500" />
+                          <span>Install App</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Free</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="p-1">
