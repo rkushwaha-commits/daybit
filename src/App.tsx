@@ -62,12 +62,28 @@ export default function App() {
   const [authBannerError, setAuthBannerError] = useState<string | null>(null);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(SETUP_STORAGE_KEY) === 'true';
+      // Allow testing onboarding by appending ?setup=true, ?fresh=true, or ?onboarding=true to URL
+      if (typeof window !== 'undefined') {
+        const search = window.location.search;
+        if (search.includes('setup=true') || search.includes('fresh=true') || search.includes('onboarding=true')) {
+          localStorage.removeItem(SETUP_STORAGE_KEY);
+          return false;
+        }
+      }
+
+      if (localStorage.getItem(SETUP_STORAGE_KEY) === 'true') {
+        return true;
+      }
+      // If user already has stored habits from a prior visit, they are not a first-time user
+      if (localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem(OLD_LOCAL_STORAGE_KEY)) {
+        localStorage.setItem(SETUP_STORAGE_KEY, 'true');
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
   });
-  const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [avatarId, setAvatarId] = useState<string>(() => {
     try {
       const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
@@ -204,6 +220,10 @@ export default function App() {
       localStorage.setItem(SETUP_STORAGE_KEY, 'true');
     } catch (e) {
       console.warn('Failed to save setup completion:', e);
+    }
+    // Clean ?setup=true from URL if present
+    if (typeof window !== 'undefined' && window.location.search.includes('setup=')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -379,10 +399,15 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    if (window.confirm('Reset all habits back to default clean habits?')) {
+    const confirmed = window.confirm(
+      'Reset Daybit and start fresh?\n\nThis will reset habits back to default and open the Setup Onboarding screen from the beginning.'
+    );
+    if (confirmed) {
+      localStorage.removeItem(SETUP_STORAGE_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
       const sample = getDefaultHabits();
       setHabits(sample);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sample));
+      setIsSetupComplete(false);
       if (user) {
         upsertAllCloudHabits(user.id, sample).catch(console.error);
       }
@@ -444,8 +469,8 @@ export default function App() {
     );
   }
 
-  // Show Setup / Onboarding screen for first-time users or when opened manually
-  if ((!isSetupComplete && !user) || isSetupOpen) {
+  // Show Setup / Onboarding screen strictly for first-time users
+  if (!isSetupComplete && !user) {
     return (
       <SetupScreen
         theme={theme}
@@ -454,11 +479,7 @@ export default function App() {
         onSelectAvatar={handleSelectAvatar}
         currentHabits={habits}
         onSaveHabits={handleSaveSetupHabits}
-        onComplete={() => {
-          handleSetupComplete();
-          setIsSetupOpen(false);
-        }}
-        onClose={isSetupComplete || user ? () => setIsSetupOpen(false) : undefined}
+        onComplete={handleSetupComplete}
         initialError={authBannerError}
       />
     );
@@ -495,7 +516,6 @@ export default function App() {
         daysCount={days.length}
         onOpenAddModal={() => setIsAddModalOpen(true)}
         onResetData={handleResetData}
-        onOpenSetup={() => setIsSetupOpen(true)}
         bestStreak={bestStreak}
         user={user}
         isSyncing={isSyncing}

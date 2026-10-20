@@ -13,7 +13,6 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   MoreVertical,
   UserCircle2,
   Download,
@@ -35,7 +34,6 @@ interface HeaderProps {
   daysCount: number;
   onOpenAddModal: () => void;
   onResetData: () => void;
-  onOpenSetup: () => void;
   bestStreak: number;
   user: User | null;
   isSyncing: boolean;
@@ -61,7 +59,6 @@ export const Header: React.FC<HeaderProps> = ({
   daysCount,
   onOpenAddModal,
   onResetData,
-  onOpenSetup,
   bestStreak,
   user,
   isSyncing,
@@ -197,19 +194,6 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
                           {theme}
                         </span>
-                      </button>
-
-                      {/* Setup Wizard */}
-                      <button
-                        onClick={() => { setIsMobileMenuOpen(false); onOpenSetup(); }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                        role="menuitem"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-emerald-500" />
-                          <span>Setup Wizard</span>
-                        </div>
-                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Preferences</span>
                       </button>
 
                       {/* Install App (PWA) */}
@@ -539,19 +523,6 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
                         {theme}
                       </span>
-                    </button>
-
-                    {/* Setup Wizard */}
-                    <button
-                      onClick={() => { setIsDesktopMenuOpen(false); onOpenSetup(); }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                      role="menuitem"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-500" />
-                        <span>Setup Wizard</span>
-                      </div>
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">Preferences</span>
                     </button>
 
                     {/* Install App (PWA) */}

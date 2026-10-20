@@ -290,12 +290,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
             <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
 
             {/* Inline Category Filter Chips */}
-            <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none touch-pan-x">
+            <div className="flex items-center gap-1 overflow-x-auto py-0.5 scrollbar-none no-scrollbar touch-pan-x">
               <button
+                type="button"
                 onClick={() => onSelectCategory('all')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
                   selectedCategory === 'all'
-                    ? 'bg-slate-900 dark:bg-emerald-600 text-white shadow-2xs'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
@@ -303,9 +304,10 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
               </button>
               {categories.map((cat) => (
                 <button
+                  type="button"
                   key={cat}
                   onClick={() => onSelectCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
                     selectedCategory === cat
                       ? 'bg-emerald-600 text-white shadow-2xs font-bold'
                       : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -379,26 +381,28 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
 
         {/* Mobile Toolbar (< sm) */}
         <div className="flex sm:hidden flex-col gap-2 p-2.5">
-          {/* Scrollable Category Chips Ribbon (Never wraps!) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none touch-pan-x py-0.5">
+          {/* Scrollable Category Chips Ribbon (Never wraps, no scrollbar!) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar touch-pan-x py-1 px-0.5 select-none scroll-smooth">
             <button
+              type="button"
               onClick={() => onSelectCategory('all')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0 cursor-pointer ${
+              className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
                 selectedCategory === 'all'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
+                  ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-600/25'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700/80'
               }`}
             >
               All
             </button>
             {categories.map((cat) => (
               <button
+                type="button"
                 key={cat}
                 onClick={() => onSelectCategory(cat)}
-                className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 shrink-0 cursor-pointer ${
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 active:scale-95 shrink-0 cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
+                    ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-600/25 font-bold'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700/80'
                 }`}
               >
                 {cat}
