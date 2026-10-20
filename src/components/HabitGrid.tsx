@@ -538,9 +538,9 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       <div
                         key={`today-card-${habit.id}`}
                         onClick={() => handleCellClick(habit.id, todayDay, isChecked)}
-                        className={`group relative flex items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-200 cursor-pointer select-none active:scale-[0.99] ${
+                        className={`group relative flex items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-300 ease-out cursor-pointer select-none active:scale-[0.99] ${
                           isChecked
-                            ? 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60 opacity-80'
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/35 border-emerald-300/70 dark:border-emerald-800/60 shadow-xs shadow-emerald-500/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/45 hover:border-emerald-400'
                             : 'bg-white dark:bg-[#121829] border-slate-200 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 shadow-xs hover:shadow-md'
                         }`}
                       >
@@ -553,7 +553,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               e.stopPropagation();
                               handleCellClick(habit.id, todayDay, isChecked);
                             }}
-                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 cursor-pointer ${
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
                               isChecked
                                 ? 'scale-105'
                                 : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400'
@@ -570,7 +570,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                             aria-label={`Toggle habit ${habit.name}`}
                           >
                             {isChecked && (
-                              <Check className="w-4 h-4 text-white stroke-[3.5]" />
+                              <Check className="w-4 h-4 text-white stroke-[3.5] animate-check-pop" />
                             )}
                           </button>
 
@@ -587,13 +587,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
 
                           {/* Title & Metadata */}
                           <div className="min-w-0 flex-1">
-                            <p
-                              className={`text-sm sm:text-base font-bold transition-all duration-200 leading-snug break-words ${
-                                isChecked
-                                  ? 'line-through text-slate-400 dark:text-slate-500 font-medium'
-                                  : 'text-slate-900 dark:text-white'
-                              }`}
-                            >
+                            <p className="text-sm sm:text-base font-bold transition-colors duration-200 leading-snug break-words text-slate-900 dark:text-white">
                               {habit.name}
                             </p>
 
@@ -613,6 +607,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap">
                                 {completedDaysInMonth}/{target}d
                               </span>
+
+                              {isChecked && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md transition-all animate-fade-in">
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                  <span>Done</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -760,7 +761,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                                   : isCellDisabled
                                   ? 'bg-slate-50/60 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600 border border-slate-100/60 dark:border-slate-800/40 cursor-not-allowed'
                                   : day.isToday
-                                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500 font-extrabold'
+                                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200/70 dark:hover:bg-emerald-900/50 font-extrabold'
                                   : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold'
                               }`}
                               style={
@@ -779,9 +780,6 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               <span className="text-[11px] font-bold leading-tight mt-0.5">
                                 {day.dayNumber}
                               </span>
-                              {day.isToday && !isChecked && (
-                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-slate-900" />
-                              )}
                             </button>
                           );
                         })}
