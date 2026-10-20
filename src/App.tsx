@@ -177,8 +177,7 @@ export default function App() {
     return habits.filter((h) => h.completions[todayDay.dateStr]).length;
   }, [todayDay, habits]);
 
-  // Filter & Search states
-  const [searchQuery, setSearchQuery] = useState('');
+  // Category filter state
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -302,14 +301,11 @@ export default function App() {
     return Array.from(new Set([...defaultCats, ...usedCats])) as HabitCategory[];
   }, [habits]);
 
-  // Filtered habits
+  // Filtered habits by selected category
   const filteredHabits = useMemo(() => {
-    return habits.filter((habit) => {
-      const matchesSearch = habit.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || habit.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [habits, searchQuery, selectedCategory]);
+    if (selectedCategory === 'all') return habits;
+    return habits.filter((habit) => habit.category === selectedCategory);
+  }, [habits, selectedCategory]);
 
   // Compute month summary statistics
   const summary: MonthSummary = useMemo(() => {
@@ -490,8 +486,6 @@ export default function App() {
 
       {/* Top Application Header with Integrated Month Navigation */}
       <Header
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         currentDate={currentDate}
         todayDate={todayDate}
         onPrevMonth={handlePrevMonth}
