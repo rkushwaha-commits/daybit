@@ -398,22 +398,6 @@ export default function App() {
     }
   };
 
-  const handleResetData = () => {
-    const confirmed = window.confirm(
-      'Reset Daybit and start fresh?\n\nThis will reset habits back to default and open the Setup Onboarding screen from the beginning.'
-    );
-    if (confirmed) {
-      localStorage.removeItem(SETUP_STORAGE_KEY);
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
-      const sample = getDefaultHabits();
-      setHabits(sample);
-      setIsSetupComplete(false);
-      if (user) {
-        upsertAllCloudHabits(user.id, sample).catch(console.error);
-      }
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -515,7 +499,6 @@ export default function App() {
         onJumpToCurrentMonth={handleJumpToCurrentMonth}
         daysCount={days.length}
         onOpenAddModal={() => setIsAddModalOpen(true)}
-        onResetData={handleResetData}
         bestStreak={bestStreak}
         user={user}
         isSyncing={isSyncing}
