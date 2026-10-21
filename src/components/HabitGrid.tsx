@@ -12,6 +12,8 @@ import {
   Calendar,
   Table2,
   Target,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
 import { CalendarDay, calculateHabitStreak } from '../utils/dateUtils';
@@ -128,7 +130,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   // Today day object if current month contains today
   const todayDay = days.find((d) => d.isToday);
 
-  // Table horizontal scroll metrics for minimal hairline indicator
+  // Table horizontal scroll metrics
   const [tableScrollState, setTableScrollState] = useState({
     scrollLeft: 0,
     scrollWidth: 1000,
@@ -142,22 +144,19 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
     }
   };
 
-  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!tableContainerRef.current) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const maxScroll = tableContainerRef.current.scrollWidth - tableContainerRef.current.clientWidth;
-    tableContainerRef.current.scrollTo({
-      left: clickRatio * maxScroll,
-      behavior: 'smooth',
-    });
-  };
-
   const maxTableScroll = Math.max(1, tableScrollState.scrollWidth - tableScrollState.clientWidth);
   const canScrollTableLeft = tableScrollState.scrollLeft > 10;
-  const thumbWidthPct = Math.max(12, Math.min(100, (tableScrollState.clientWidth / tableScrollState.scrollWidth) * 100));
-  const availableTrackPct = 100 - thumbWidthPct;
-  const thumbLeftPct = maxTableScroll > 0 ? (tableScrollState.scrollLeft / maxTableScroll) * availableTrackPct : 0;
+  const canScrollTableRight = tableScrollState.scrollLeft < maxTableScroll - 15;
+
+  const scrollTableByDays = (deltaDays: number) => {
+    if (tableContainerRef.current) {
+      const dayColWidth = window.innerWidth < 640 ? 36 : 38;
+      tableContainerRef.current.scrollBy({
+        left: deltaDays * dayColWidth,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   // Function to smoothly scroll table to the 'Today' column
   const scrollToToday = (behavior: ScrollBehavior = 'smooth') => {
@@ -904,7 +903,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
         /* ─────────────────────────────────────────────────────────────
             MODE C: FULL SPREADSHEET TABLE VIEW
         ───────────────────────────────────────────────────────────── */
-        <div className="relative">
+        <div className="relative group/table">
           <div
             ref={tableContainerRef}
             onScroll={updateTableScrollMetrics}
@@ -1271,23 +1270,34 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
           </table>
         </div>
 
-        {/* Minimalist Hairline Scroll Progress Rail (Only visible when table overflows) */}
-        {tableScrollState.scrollWidth > tableScrollState.clientWidth + 10 && (
-          <div
-            onClick={handleScrubberClick}
-            className="h-2 relative flex items-center px-3 cursor-pointer group/scrub select-none bg-slate-50/70 dark:bg-slate-900/70 border-t border-slate-200/60 dark:border-slate-800/60"
-            title="Click along the rail to scrub across the month"
+        {/* Floating Hover Navigation Arrows & Subtle Horizon Edge Hint */}
+        {canScrollTableLeft && (
+          <button
+            type="button"
+            onClick={() => scrollTableByDays(-7)}
+            className="hidden sm:flex absolute left-[215px] sm:left-[275px] top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full items-center justify-center bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-md border border-slate-200/90 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-700 dark:hover:text-emerald-400 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/table:opacity-100 cursor-pointer backdrop-blur-xs"
+            title="Scroll 1 week back"
+            aria-label="Scroll 1 week back"
           >
-            <div className="w-full h-[2px] group-hover/scrub:h-[3px] bg-slate-200/80 dark:bg-slate-800 rounded-full relative overflow-hidden transition-all duration-150">
-              <div
-                className="absolute top-0 bottom-0 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.45)] transition-[left,width] duration-75"
-                style={{
-                  left: `${thumbLeftPct}%`,
-                  width: `${thumbWidthPct}%`,
-                }}
-              />
-            </div>
-          </div>
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+
+        {canScrollTableRight && (
+          <>
+            {/* Subtle Right Edge Fade Hint (tells user more days exist to the right) */}
+            <div className="pointer-events-none absolute top-0 bottom-0 right-0 sm:right-[204px] w-6 bg-gradient-to-l from-slate-400/15 dark:from-black/40 to-transparent z-15 transition-opacity duration-200" />
+
+            <button
+              type="button"
+              onClick={() => scrollTableByDays(7)}
+              className="hidden sm:flex absolute right-2 sm:right-[212px] top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full items-center justify-center bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-md border border-slate-200/90 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-700 dark:hover:text-emerald-400 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/table:opacity-100 cursor-pointer backdrop-blur-xs"
+              title="Scroll 1 week forward"
+              aria-label="Scroll 1 week forward"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
         )}
       </div>
     )}
