@@ -15,13 +15,10 @@ import { signInWithGoogle } from '../lib/supabase';
 import { Theme } from '../hooks/useTheme';
 import { Habit } from '../types/habit';
 import { STARTER_HABIT_OPTIONS, buildHabitsFromStarterIds, DEFAULT_STARTER_HABIT_IDS } from '../data/initialHabits';
-import { AVATAR_PERSONAS } from '../data/avatars';
 
 interface SetupScreenProps {
   theme: Theme;
   onToggleTheme: (e?: React.MouseEvent) => void;
-  selectedAvatarId: string;
-  onSelectAvatar: (avatarId: string) => void;
   currentHabits: Habit[];
   onSaveHabits: (habits: Habit[]) => void;
   onComplete: () => void;
@@ -54,8 +51,6 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' })
 export const SetupScreen: React.FC<SetupScreenProps> = ({
   theme,
   onToggleTheme,
-  selectedAvatarId,
-  onSelectAvatar,
   currentHabits,
   onSaveHabits,
   onComplete,
@@ -129,10 +124,6 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     onSaveHabits([...newStarterHabits, ...customHabits]);
     onComplete();
   };
-
-  const featuredPersonas = AVATAR_PERSONAS.slice(0, 6);
-  const activePersona =
-    AVATAR_PERSONAS.find((p) => p.id === selectedAvatarId) || AVATAR_PERSONAS[0];
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs transition-colors duration-300">
@@ -343,16 +334,16 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         )}
 
         {/* ═════════════════════════════════════════════════════════════════════
-            STEP 3: Appearance & Persona (Clean & Minimal)
+            STEP 3: Appearance (Clean & Minimal Theme)
         ═════════════════════════════════════════════════════════════════════ */}
         {step === 3 && (
           <div className="space-y-5">
             <div className="text-center pt-1">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Personalize
+                Appearance
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Choose your theme and avatar
+                Choose your preferred theme
               </p>
             </div>
 
@@ -384,36 +375,6 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                   <Moon className="w-4 h-4 text-indigo-400" />
                   <span>Dark</span>
                 </button>
-              </div>
-            </div>
-
-            {/* Avatar Selector */}
-            <div>
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-                <span>Avatar</span>
-                <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  {activePersona.name}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-6 gap-2">
-                {featuredPersonas.map((persona) => {
-                  const isSelected = selectedAvatarId === persona.id;
-                  return (
-                    <button
-                      key={persona.id}
-                      type="button"
-                      onClick={() => onSelectAvatar(persona.id)}
-                      className={`relative flex items-center justify-center p-2 rounded-xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/40 ring-1 ring-emerald-500/30'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                      }`}
-                    >
-                      <span className="text-lg">{persona.emoji}</span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
 

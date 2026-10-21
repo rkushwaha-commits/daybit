@@ -13,12 +13,10 @@ import {
   ChevronLeft,
   ChevronRight,
   MoreVertical,
-  UserCircle2,
   Download,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Theme } from '../hooks/useTheme';
-import { getAvatarById } from '../data/avatars';
 import { getMonthName } from '../utils/dateUtils';
 
 interface HeaderProps {
@@ -36,8 +34,6 @@ interface HeaderProps {
   onSignOut: () => void;
   theme: Theme;
   onToggleTheme: (e?: React.MouseEvent) => void;
-  selectedAvatarId: string;
-  onOpenAvatarPicker: () => void;
   activeMobileTab?: 'today' | 'grid' | 'stats';
   onPromptInstall?: () => void;
   isStandalone?: boolean;
@@ -58,15 +54,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   theme,
   onToggleTheme,
-  selectedAvatarId,
-  onOpenAvatarPicker,
   activeMobileTab = 'today',
   onPromptInstall,
   isStandalone = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
-  const avatarUrl = user?.user_metadata?.avatar_url;
-  const persona = getAvatarById(selectedAvatarId);
 
   const isCurrentMonth =
     currentDate.getFullYear() === todayDate.getFullYear() &&
@@ -189,32 +181,22 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
 
                     <div className="p-1">
-                      {/* Avatar Picker */}
-                      <button
-                        onClick={() => { setIsMobileMenuOpen(false); onOpenAvatarPicker(); }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                        role="menuitem"
-                      >
-                        <div className="flex items-center gap-2">
-                          <UserCircle2 className="w-4 h-4 text-indigo-500" />
-                          <span>Avatar Persona</span>
-                        </div>
-                        <span className="text-sm">{persona.emoji}</span>
-                      </button>
-                    </div>
-
-                    <div className="p-1">
                       {user ? (
-                        <button
-                          onClick={() => { setIsMobileMenuOpen(false); onSignOut(); }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
-                          role="menuitem"
-                        >
-                          <div className="flex items-center gap-2">
-                            <LogOut className="w-4 h-4" />
-                            <span>Sign Out</span>
+                        <>
+                          <div className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 truncate border-b border-slate-100 dark:border-slate-800/60 mb-1">
+                            {displayName}
                           </div>
-                        </button>
+                          <button
+                            onClick={() => { setIsMobileMenuOpen(false); onSignOut(); }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                            role="menuitem"
+                          >
+                            <div className="flex items-center gap-2">
+                              <LogOut className="w-4 h-4" />
+                              <span>Sign Out</span>
+                            </div>
+                          </button>
+                        </>
                       ) : (
                         <button
                           onClick={() => { setIsMobileMenuOpen(false); onOpenAuthModal(); }}
@@ -351,27 +333,11 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-extrabold text-amber-950 dark:text-amber-100">{bestStreak}d</span>
             </div>
 
-            {/* Signed-in User Profile Badge (Desktop) */}
+            {/* Signed-in User Profile Badge (Desktop: Name + Sync Status Only) */}
             {user && (
-              <div className="inline-flex h-8 items-center gap-2 pl-1.5 pr-2 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={onOpenAvatarPicker}
-                  title={`Persona: ${selectedAvatarId === 'google' ? 'Google Account Photo' : persona.name}`}
-                  className="relative w-6 h-6 shrink-0 cursor-pointer"
-                >
-                  {selectedAvatarId === 'google' && avatarUrl ? (
-                    <img src={avatarUrl} alt={displayName} className="w-6 h-6 rounded-full object-cover ring-1 ring-emerald-500/40" />
-                  ) : (
-                    <div className={`w-6 h-6 rounded-full bg-gradient-to-tr ${persona.bgGradient} flex items-center justify-center text-[12px] ring-1 ${persona.ringColor}`}>
-                      {persona.emoji}
-                    </div>
-                  )}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-white dark:border-slate-900" />
-                </button>
-
+              <div className="inline-flex h-8 items-center gap-2 px-2.5 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-100 leading-none truncate max-w-[120px]">
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-none truncate max-w-[130px]">
                     {displayName}
                   </span>
                   <span className="flex items-center gap-1 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none mt-0.5">
@@ -389,10 +355,13 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
 
+                <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700" />
+
                 <button
                   onClick={onSignOut}
                   title="Sign out"
-                  className="ml-0.5 p-1 rounded-md text-slate-400 hover:text-rose-500 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Sign out"
+                  className="p-1 rounded text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
                 >
                   <LogOut className="w-3 h-3" />
                 </button>
@@ -462,32 +431,22 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
 
                   <div className="p-1">
-                    {/* Avatar Picker */}
-                    <button
-                      onClick={() => { setIsDesktopMenuOpen(false); onOpenAvatarPicker(); }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                      role="menuitem"
-                    >
-                      <div className="flex items-center gap-2">
-                        <UserCircle2 className="w-4 h-4 text-indigo-500" />
-                        <span>Avatar Persona</span>
-                      </div>
-                      <span className="text-sm">{persona.emoji}</span>
-                    </button>
-                  </div>
-
-                  <div className="p-1">
                     {user ? (
-                      <button
-                        onClick={() => { setIsDesktopMenuOpen(false); onSignOut(); }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
-                        role="menuitem"
-                      >
-                        <div className="flex items-center gap-2">
-                          <LogOut className="w-4 h-4" />
-                          <span>Sign Out</span>
+                      <>
+                        <div className="px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 truncate border-b border-slate-100 dark:border-slate-800/60 mb-1">
+                          {displayName}
                         </div>
-                      </button>
+                        <button
+                          onClick={() => { setIsDesktopMenuOpen(false); onSignOut(); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                          role="menuitem"
+                        >
+                          <div className="flex items-center gap-2">
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign Out</span>
+                          </div>
+                        </button>
+                      </>
                     ) : (
                       <button
                         onClick={() => { setIsDesktopMenuOpen(false); onOpenAuthModal(); }}

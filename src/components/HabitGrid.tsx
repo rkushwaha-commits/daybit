@@ -2,13 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import {
   Check,
+  CheckCircle2,
   Trash2,
   Flame,
   ListChecks,
   Lock,
   Unlock,
   Plus,
-  LayoutGrid,
+  Calendar,
   Table2,
   Target,
 } from 'lucide-react';
@@ -256,7 +257,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 )}
               </button>
 
-              {/* 2. Cards View Button */}
+              {/* 2. Calendar View Button */}
               <button
                 type="button"
                 onClick={() => handleSelectView('cards')}
@@ -265,10 +266,10 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="Card View (Monthly Heatmap Streaks)"
+                title="Calendar View (Monthly Habit Heatmap)"
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Cards</span>
+                <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                <span>Calendar</span>
               </button>
 
               {/* 3. Table View Button */}
@@ -413,7 +414,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
           {/* Sub-row for Month view on mobile: Format Switcher + Lock + Today */}
           {effectiveView !== 'today' && (
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
-              {/* Cards vs Table format switch */}
+              {/* Calendar vs Table format switch */}
               <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-800/80">
                 <button
                   type="button"
@@ -423,10 +424,10 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
-                  title="Card View"
+                  title="Calendar View"
                 >
-                  <LayoutGrid className="w-3 h-3" />
-                  <span>Cards</span>
+                  <Calendar className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                  <span>Calendar</span>
                 </button>
                 <button
                   type="button"
@@ -490,11 +491,16 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                     <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
                       {todayDay.fullDayName} · {todayDay.dateStr}
                     </p>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">
-                      {todayCompletedCount === habits.length && habits.length > 0
-                        ? '🎉 All Done Today!'
-                        : `${habits.length - todayCompletedCount} habits remaining`}
-                    </h3>
+                    {todayCompletedCount === habits.length && habits.length > 0 ? (
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tracking-tight flex items-center gap-1.5">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 stroke-[2.5] inline-block shrink-0" />
+                        <span>All Done Today!</span>
+                      </h3>
+                    ) : (
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5 tracking-tight">
+                        {habits.length - todayCompletedCount} {habits.length - todayCompletedCount === 1 ? 'habit' : 'habits'} remaining
+                      </h3>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
@@ -678,120 +684,211 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
-                  {habits.map((habit) => {
-                  const completedDaysInMonth = days.filter((d) => habit.completions[d.dateStr]).length;
-                  const target = habit.targetPerMonth || days.length;
-                  const streak = calculateHabitStreak(habit.completions);
-                  const completionPercentage = Math.min(Math.round((completedDaysInMonth / target) * 100), 100);
+                  {(() => {
+                    const firstDayOfWeekIndex = days.length > 0 ? (days[0].date.getDay() + 6) % 7 : 0;
+                    const totalSlots = firstDayOfWeekIndex + days.length;
+                    const trailingSlots = (7 - (totalSlots % 7)) % 7;
 
-                  return (
-                    <div
-                      key={`matrix-card-${habit.id}`}
-                      className="bg-white dark:bg-[#121829] rounded-2xl border border-slate-200 dark:border-slate-800/90 p-3.5 shadow-xs space-y-3"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-2xs"
-                            style={{
-                              backgroundColor: `${habit.color}15`,
-                              border: `1px solid ${habit.color}35`,
-                            }}
-                          >
-                            {habit.emoji}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-bold text-sm text-slate-900 dark:text-white break-words leading-snug">
-                              {habit.name}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span
-                                className="text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"
+                    return habits.map((habit) => {
+                      const completedDaysInMonth = days.filter((d) => habit.completions[d.dateStr]).length;
+                      const target = habit.targetPerMonth || days.length;
+                      const streak = calculateHabitStreak(habit.completions);
+                      const completionPercentage = Math.min(Math.round((completedDaysInMonth / target) * 100), 100);
+
+                      return (
+                        <div
+                          key={`matrix-card-${habit.id}`}
+                          className="bg-white dark:bg-[#121829] rounded-2xl border border-slate-200/90 dark:border-slate-800/90 p-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700/80 transition-all space-y-3"
+                        >
+                          {/* Card Header: Icon, Name, Category, Streak & Delete */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-2xs"
                                 style={{
-                                  color: habit.color,
-                                  backgroundColor: `${habit.color}18`,
+                                  backgroundColor: `${habit.color}15`,
+                                  border: `1px solid ${habit.color}35`,
                                 }}
                               >
-                                {habit.category}
-                              </span>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap">
-                                {completedDaysInMonth}/{target}d ({completionPercentage}%)
-                              </span>
+                                {habit.emoji}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-bold text-sm text-slate-900 dark:text-white break-words leading-snug">
+                                  {habit.name}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span
+                                    className="text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"
+                                    style={{
+                                      color: habit.color,
+                                      backgroundColor: `${habit.color}18`,
+                                    }}
+                                  >
+                                    {habit.category}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap">
+                                    {completedDaysInMonth}/{target}d ({completionPercentage}%)
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Streak & Delete */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {streak.current > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
+                                  <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                  <span>{streak.current}d</span>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm(`Delete "${habit.name}"?`)) {
+                                    onDeleteHabit(habit.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all cursor-pointer"
+                                title="Delete habit"
+                                aria-label="Delete habit"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Streak & Delete */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {streak.current > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
-                              <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
-                              <span>{streak.current}d</span>
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete "${habit.name}"?`)) {
-                                onDeleteHabit(habit.id);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all cursor-pointer"
-                            title="Delete habit"
-                            aria-label="Delete habit"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
+                          {/* Mini Habit Monthly Progress Bar */}
+                          <div className="w-full bg-slate-100 dark:bg-slate-800/80 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${completionPercentage}%`,
+                                backgroundColor: habit.color,
+                              }}
+                            />
+                          </div>
 
-                      {/* Visual Month Heatmap Grid: 7 days per row */}
-                      <div className="grid grid-cols-7 gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                        {days.map((day) => {
-                          const isChecked = Boolean(habit.completions[day.dateStr]);
-                          const isCellDisabled = day.isFuture || (isLocked && !day.isToday);
+                          {/* Calendar Month Grid */}
+                          <div className="pt-1">
+                            {/* Weekday Header Row (Mon - Sun) */}
+                            <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center mb-1.5 select-none">
+                              {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((wd, i) => (
+                                <span
+                                  key={wd}
+                                  className={`text-[9px] sm:text-[10px] font-bold tracking-tight uppercase ${
+                                    i >= 5
+                                      ? 'text-amber-600/70 dark:text-amber-400/60'
+                                      : 'text-slate-400 dark:text-slate-500'
+                                  }`}
+                                >
+                                  {wd}
+                                </span>
+                              ))}
+                            </div>
 
-                          return (
-                            <button
-                              type="button"
-                              key={`grid-cell-${habit.id}-${day.dateStr}`}
-                              onClick={() => handleCellClick(habit.id, day, isChecked)}
-                              disabled={isCellDisabled}
-                              className={`h-9 rounded-xl flex flex-col items-center justify-center transition-all duration-150 cursor-pointer relative select-none ${
-                                isChecked
-                                  ? 'text-white shadow-xs font-black'
-                                  : isCellDisabled
-                                  ? 'bg-slate-50/60 dark:bg-slate-900/30 text-slate-300 dark:text-slate-600 border border-slate-100/60 dark:border-slate-800/40 cursor-not-allowed'
-                                  : day.isToday
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200/70 dark:hover:bg-emerald-900/50 font-extrabold'
-                                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold'
-                              }`}
-                              style={
-                                isChecked
-                                  ? {
-                                      backgroundColor: habit.color,
-                                      boxShadow: `0 2px 6px ${habit.color}40`,
+                            {/* Aligned Calendar Day Tiles */}
+                            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+                              {/* Leading empty spacer slots */}
+                              {Array.from({ length: firstDayOfWeekIndex }).map((_, idx) => (
+                                <div
+                                  key={`empty-start-${habit.id}-${idx}`}
+                                  className="h-8 sm:h-8.5 rounded-xl pointer-events-none select-none opacity-0"
+                                  aria-hidden="true"
+                                />
+                              ))}
+
+                              {/* Days of Month */}
+                              {days.map((day) => {
+                                const isChecked = Boolean(habit.completions[day.dateStr]);
+                                const isCellDisabled = day.isFuture || (isLocked && !day.isToday);
+
+                                return (
+                                  <button
+                                    type="button"
+                                    key={`grid-cell-${habit.id}-${day.dateStr}`}
+                                    onClick={() => handleCellClick(habit.id, day, isChecked)}
+                                    disabled={isCellDisabled}
+                                    className={`h-8 sm:h-8.5 rounded-xl flex flex-col items-center justify-center transition-all duration-150 relative select-none ${
+                                      isChecked
+                                        ? isCellDisabled
+                                          ? 'text-white shadow-xs font-black cursor-not-allowed opacity-95'
+                                          : 'text-white shadow-xs font-black cursor-pointer hover:scale-108 active:scale-95 hover:brightness-110'
+                                        : day.isToday
+                                        ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 font-black hover:bg-emerald-200/70 dark:hover:bg-emerald-900/50 hover:scale-105 active:scale-95 cursor-pointer'
+                                        : day.isFuture
+                                        ? 'bg-slate-50/40 dark:bg-slate-900/30 border border-dashed border-slate-200/80 dark:border-slate-800/60 text-slate-400/70 dark:text-slate-600 font-medium cursor-default'
+                                        : isLocked
+                                        ? 'bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 font-semibold cursor-not-allowed'
+                                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold shadow-2xs hover:border-emerald-500 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-300 hover:scale-108 active:scale-95 cursor-pointer'
+                                    }`}
+                                    style={
+                                      isChecked
+                                        ? {
+                                            backgroundColor: habit.color,
+                                            boxShadow: `0 2px 6px ${habit.color}40`,
+                                          }
+                                        : undefined
                                     }
-                                  : undefined
-                              }
-                              title={`${habit.name} on ${day.dayOfWeek}, ${day.dateStr}: ${isChecked ? 'Completed' : 'Pending'}`}
-                            >
-                              <span className="text-[8px] uppercase tracking-tighter opacity-70 leading-none">
-                                {day.dayOfWeek[0]}
-                              </span>
-                              <span className="text-[11px] font-bold leading-tight mt-0.5">
-                                {day.dayNumber}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                                    title={`${habit.name} on ${day.fullDayName}, ${day.dateStr}: ${
+                                      isChecked ? 'Completed' : 'Pending'
+                                    }${
+                                      day.isToday
+                                        ? ' • Today (Click to toggle)'
+                                        : day.isFuture
+                                        ? ' • Future'
+                                        : isLocked
+                                        ? ' • History Locked (Unlock in toolbar to edit)'
+                                        : ' • Past (Click to toggle)'
+                                    }`}
+                                  >
+                                    <span className="text-[11px] sm:text-xs font-bold leading-none">
+                                      {day.dayNumber}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+
+                              {/* Trailing empty spacer slots */}
+                              {Array.from({ length: trailingSlots }).map((_, idx) => (
+                                <div
+                                  key={`empty-end-${habit.id}-${idx}`}
+                                  className="h-8 sm:h-8.5 rounded-xl pointer-events-none select-none opacity-0"
+                                  aria-hidden="true"
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Card Footer: Lock Mode Context Strip */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] select-none">
+                            {isLocked ? (
+                              <>
+                                <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500 font-medium">
+                                  <Lock className="w-2.5 h-2.5 text-emerald-600/70 dark:text-emerald-400/70" />
+                                  <span>History Locked</span>
+                                </span>
+                                <span className="text-slate-400 dark:text-slate-500">
+                                  Only today editable
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="flex items-center gap-1 text-amber-700 dark:text-amber-400 font-bold">
+                                  <Unlock className="w-2.5 h-2.5" />
+                                  <span>Flexible Edit</span>
+                                </span>
+                                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                  Click any day to edit
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
             )}
           </div>
         ) : (
@@ -959,7 +1056,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               isCellDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
                             } ${
                               day.isToday
-                                ? 'bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 ring-1 ring-inset ring-emerald-500/30'
+                                ? 'bg-emerald-50/70 dark:bg-emerald-950/35 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/50'
                                 : day.isFuture
                                 ? 'bg-slate-50/20 dark:bg-slate-950/20 opacity-35'
                                 : day.isWeekend

@@ -7,8 +7,6 @@ import { HabitStats } from './components/HabitStats';
 import { HabitGrid } from './components/HabitGrid';
 import { AddHabitModal } from './components/AddHabitModal';
 import { AuthModal } from './components/AuthModal';
-import { AvatarPickerModal } from './components/AvatarPickerModal';
-import { DEFAULT_AVATAR_ID } from './data/avatars';
 import GreetingBanner from './components/GreetingBanner';
 import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, Table2, AlertCircle, X } from 'lucide-react';
 import HabitChart from './components/HabitChart';
@@ -29,7 +27,6 @@ import {
 
 const LOCAL_STORAGE_KEY = 'daybit_habits_v2';
 const OLD_LOCAL_STORAGE_KEY = 'daybit_habits_v1';
-const AVATAR_STORAGE_KEY = 'daybit_avatar_id_v1';
 const SETUP_STORAGE_KEY = 'daybit_setup_complete_v1';
 
 export default function App() {
@@ -40,7 +37,6 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'today' | 'grid' | 'stats'>('today');
 
   // ── PWA Installation Hook ──
@@ -83,15 +79,6 @@ export default function App() {
     } catch {
       return false;
     }
-  });
-  const [avatarId, setAvatarId] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
-      if (saved) return saved;
-    } catch {
-      // fallback
-    }
-    return DEFAULT_AVATAR_ID;
   });
 
   // ── Current real date — synced to today and auto-refreshed at midnight ──
@@ -403,15 +390,6 @@ export default function App() {
     }
   };
 
-  const handleSelectAvatar = (newAvatarId: string) => {
-    setAvatarId(newAvatarId);
-    try {
-      localStorage.setItem(AVATAR_STORAGE_KEY, newAvatarId);
-    } catch (e) {
-      console.warn('Failed to save avatar ID to localStorage:', e);
-    }
-  };
-
   const handlePrevMonth = () => {
     setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -455,8 +433,6 @@ export default function App() {
       <SetupScreen
         theme={theme}
         onToggleTheme={toggleTheme}
-        selectedAvatarId={avatarId}
-        onSelectAvatar={handleSelectAvatar}
         currentHabits={habits}
         onSaveHabits={handleSaveSetupHabits}
         onComplete={handleSetupComplete}
@@ -500,8 +476,6 @@ export default function App() {
         onSignOut={handleSignOut}
         theme={theme}
         onToggleTheme={toggleTheme}
-        selectedAvatarId={avatarId}
-        onOpenAvatarPicker={() => setIsAvatarPickerOpen(true)}
         activeMobileTab={mobileTab}
         onPromptInstall={promptInstall}
         isStandalone={isStandalone}
@@ -677,15 +651,6 @@ export default function App() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={() => setIsAuthModalOpen(false)}
-      />
-
-      {/* Modal for Customizing Habit Persona Avatar */}
-      <AvatarPickerModal
-        isOpen={isAvatarPickerOpen}
-        onClose={() => setIsAvatarPickerOpen(false)}
-        selectedAvatarId={avatarId}
-        onSelectAvatar={handleSelectAvatar}
-        user={user}
       />
 
       {/* Modal for Installing App / Home Screen Guidance (PWA) */}
