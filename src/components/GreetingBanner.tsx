@@ -23,7 +23,7 @@ function getGreeting(name: string): Greeting {
       iconColor: 'text-amber-500',
       iconBg: 'bg-amber-500/10 dark:bg-amber-500/20',
       text: `Good morning, ${name}!`,
-      sub: 'A fresh start — what habits will you conquer today?',
+      sub: 'Win the morning, own the day.',
     };
   } else if (hour >= 12 && hour < 17) {
     return {
@@ -31,7 +31,7 @@ function getGreeting(name: string): Greeting {
       iconColor: 'text-amber-500',
       iconBg: 'bg-amber-500/10 dark:bg-amber-500/20',
       text: `Good afternoon, ${name}!`,
-      sub: "You're halfway through the day — maintain your momentum.",
+      sub: 'Stay locked in. Keep the momentum going.',
     };
   } else if (hour >= 17 && hour < 21) {
     return {
@@ -39,7 +39,7 @@ function getGreeting(name: string): Greeting {
       iconColor: 'text-indigo-500 dark:text-indigo-400',
       iconBg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
       text: `Good evening, ${name}!`,
-      sub: "Wind down peacefully — don't forget to log today's wins.",
+      sub: 'Finish what you started. Lock in your wins.',
     };
   } else {
     return {
@@ -47,7 +47,7 @@ function getGreeting(name: string): Greeting {
       iconColor: 'text-indigo-400',
       iconBg: 'bg-indigo-500/10 dark:bg-indigo-500/20',
       text: `Hey, ${name}!`,
-      sub: 'Burning the midnight oil? Log your habits before you rest.',
+      sub: 'Another day of discipline. Rest and reload.',
     };
   }
 }
