@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Download,
   Bell,
+  User as UserIcon,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Theme } from '../hooks/useTheme';
@@ -215,25 +216,35 @@ export const Header: React.FC<HeaderProps> = ({
 
                     {user ? (
                       <>
-                        {/* Pure Minimal User Account Header */}
-                        <div className="px-3.5 py-2.5">
-                          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                            {displayName}
-                          </div>
-                          {user.email && (
-                            <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                              {user.email}
+                        {/* Unified User Account Row */}
+                        <div className="p-1">
+                          <div className="w-full px-3 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <UserIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                                  {displayName}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                                Synced
+                              </span>
                             </div>
-                          )}
+                            {user.email && (
+                              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate pl-6 mt-0.5 leading-tight">
+                                {user.email}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="p-1">
                           <button
                             onClick={() => { setIsMobileMenuOpen(false); onSignOut(); }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
                             role="menuitem"
                           >
-                            <LogOut className="w-3.5 h-3.5" />
+                            <LogOut className="w-4 h-4 text-rose-500" />
                             <span>Sign Out</span>
                           </button>
                         </div>
@@ -415,7 +426,7 @@ export const Header: React.FC<HeaderProps> = ({
               {isDesktopMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-2 w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800"
+                  className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800"
                 >
                   <div className="p-1">
                     {/* Theme Toggle */}
@@ -470,25 +481,35 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {user ? (
                     <>
-                      {/* Pure Minimal User Account Header */}
-                      <div className="px-3.5 py-2.5">
-                        <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                          {displayName}
-                        </div>
-                        {user.email && (
-                          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                            {user.email}
+                      {/* Unified User Account Row */}
+                      <div className="p-1">
+                        <div className="w-full px-3 py-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <UserIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" />
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                                {displayName}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                              Synced
+                            </span>
                           </div>
-                        )}
+                          {user.email && (
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate pl-6 mt-0.5 leading-tight">
+                              {user.email}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="p-1">
                         <button
                           onClick={() => { setIsDesktopMenuOpen(false); onSignOut(); }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
                           role="menuitem"
                         >
-                          <LogOut className="w-3.5 h-3.5" />
+                          <LogOut className="w-4 h-4 text-rose-500" />
                           <span>Sign Out</span>
                         </button>
                       </div>
