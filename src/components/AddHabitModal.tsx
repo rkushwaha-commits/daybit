@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Target, ChevronDown } from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
 import { AVAILABLE_HABIT_ICONS } from './HabitIcon';
 
@@ -69,66 +69,81 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
       <div className="bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden animate-modal-in transition-all duration-200">
         
         {/* Modal Header */}
-        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800 shrink-0">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
           <div className="flex items-center space-x-2.5">
-            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center transition-transform duration-200 hover:scale-105">
-              <Sparkles className="w-4 h-4" />
+            <div className="h-8.5 w-8.5 rounded-xl bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center ring-1 ring-emerald-500/25 dark:ring-emerald-400/30 shadow-2xs">
+              <Target className="w-4.5 h-4.5" strokeWidth={2.2} />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Add New Habit</h3>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">Track a new daily routine in your spreadsheet</p>
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                Add New Habit
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Craft your daily ritual
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-90 transition-all duration-200 ease-in-out"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 transition-all duration-150 cursor-pointer"
+            title="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Form - Scrollable */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           
           {/* Habit Name */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-              Habit Name *
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                Habit Name
+              </label>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                Required
+              </span>
+            </div>
             <input
               type="text"
               required
-              placeholder="e.g. Read 20 mins, Cold Shower, No Sugar"
+              placeholder="e.g. Read 20 mins, Deep work"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-all duration-200 ease-in-out"
+              className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-2xs"
             />
           </div>
 
-          {/* Emoji & Category Grid */}
+          {/* Category & Target Days Grid */}
           <div className="grid grid-cols-2 gap-3">
             {/* Category */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
                 Category
               </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as HabitCategory)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as HabitCategory)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none cursor-pointer pr-8"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </div>
+              </div>
             </div>
 
             {/* Target Days Per Month */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                Monthly Target (Days)
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                Target <span className="text-[10px] font-normal text-slate-400">(Days / Mo)</span>
               </label>
               <input
                 type="number"
@@ -136,7 +151,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
                 max={daysInMonth}
                 value={targetPerMonth}
                 onChange={(e) => setTargetPerMonth(Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out font-mono"
+                className="w-full px-3 py-2 text-xs bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono font-bold"
               />
             </div>
           </div>
@@ -144,14 +159,14 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
           {/* Premium Vector Icon Picker */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                Choose Icon
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                Icon
               </label>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                Unified Vector Icons
+              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                18 Curated Icons
               </span>
             </div>
-            <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 p-2 bg-slate-50/70 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-800">
               {AVAILABLE_HABIT_ICONS.map((item) => {
                 const IconComponent = item.icon;
                 const isSelected = emoji === item.id || emoji === item.id.toLowerCase();
@@ -161,10 +176,10 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
                     key={item.id}
                     onClick={() => setEmoji(item.id)}
                     title={item.label}
-                    className={`h-9 rounded-lg flex items-center justify-center transition-all duration-150 ease-in-out active:scale-95 cursor-pointer ${
+                    className={`h-9 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer ${
                       isSelected
                         ? 'shadow-xs scale-105'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/60'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
                     }`}
                     style={
                       isSelected
@@ -184,53 +199,63 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
             </div>
           </div>
 
-          {/* Color Palette */}
+          {/* Accent Color Palette */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
               Accent Color
             </label>
-            <div className="flex items-center space-x-2">
-              {COLOR_OPTIONS.map((c) => (
-                <button
-                  type="button"
-                  key={c.hex}
-                  onClick={() => setColor(c.hex)}
-                  title={c.name}
-                  className={`w-6 h-6 rounded-full transition-transform duration-200 ease-in-out active:scale-90 ${
-                    color === c.hex ? 'ring-2 ring-offset-2 ring-slate-800 dark:ring-white dark:ring-offset-slate-900 scale-110' : 'hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: c.hex }}
-                />
-              ))}
+            <div className="flex items-center gap-2">
+              {COLOR_OPTIONS.map((c) => {
+                const isSelected = color === c.hex;
+                return (
+                  <button
+                    type="button"
+                    key={c.hex}
+                    onClick={() => setColor(c.hex)}
+                    title={c.name}
+                    className={`w-6 h-6 rounded-full transition-all duration-150 active:scale-90 flex items-center justify-center cursor-pointer ${
+                      isSelected
+                        ? 'ring-2 ring-offset-2 ring-slate-800 dark:ring-white dark:ring-offset-slate-900 scale-110 shadow-sm'
+                        : 'hover:scale-110 opacity-85 hover:opacity-100'
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                  />
+                );
+              })}
             </div>
           </div>
 
-          {/* Optional Notes */}
+          {/* Why It Matters (Motivation Notes) */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-              Notes / Why it matters (Optional)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                Why It Matters
+              </label>
+              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                Optional
+              </span>
+            </div>
             <input
               type="text"
-              placeholder="e.g. Build discipline before starting my work"
+              placeholder="e.g. Boost focus & clarity"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out"
+              className="w-full px-3.5 py-2 text-xs bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-150"
             />
           </div>
 
           {/* Form Actions */}
-          <div className="pt-3 pb-safe sm:pb-0 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2.5">
+          <div className="pt-3 pb-safe sm:pb-0 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-200 ease-in-out"
+              className="px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 rounded-xl transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg shadow-sm shadow-emerald-600/30 hover:shadow-md hover:shadow-emerald-600/25 transition-all duration-200 ease-in-out cursor-pointer"
+              className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-95 rounded-xl shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
             >
               Create Habit
             </button>

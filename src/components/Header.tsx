@@ -5,7 +5,6 @@ import {
   Table2,
   Flame,
   Cloud,
-  CheckCircle2,
   LogOut,
   Loader2,
   Sun,
@@ -59,6 +58,8 @@ export const Header: React.FC<HeaderProps> = ({
   isStandalone = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+  const userInitial = (displayName || 'U').charAt(0).toUpperCase();
 
   const isCurrentMonth =
     currentDate.getFullYear() === todayDate.getFullYear() &&
@@ -333,37 +334,38 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-extrabold text-amber-950 dark:text-amber-100">{bestStreak}d</span>
             </div>
 
-            {/* Signed-in User Profile Badge (Desktop: Name + Sync Status Only) */}
+            {/* Signed-in User Profile Badge (Desktop: Minimal Single-Line Pill) */}
             {user && (
               <div className="inline-flex h-8 items-center gap-2 px-2.5 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-none truncate max-w-[130px]">
-                    {displayName}
-                  </span>
-                  <span className="flex items-center gap-1 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none mt-0.5">
-                    {isSyncing ? (
-                      <>
-                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                        Syncing
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-2.5 h-2.5" />
-                        Synced
-                      </>
-                    )}
-                  </span>
-                </div>
+                {isSyncing ? (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  </div>
+                ) : avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30 text-[10px] font-bold flex items-center justify-center shrink-0">
+                    {userInitial}
+                  </div>
+                )}
 
-                <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700" />
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[130px] leading-none">
+                  {displayName}
+                </span>
+
+                <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
 
                 <button
                   onClick={onSignOut}
                   title="Sign out"
                   aria-label="Sign out"
-                  className="p-1 rounded text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 active:scale-90 transition-all cursor-pointer"
+                  className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 active:scale-90 transition-all cursor-pointer"
                 >
-                  <LogOut className="w-3 h-3" />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
