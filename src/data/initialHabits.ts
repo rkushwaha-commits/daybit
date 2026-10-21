@@ -15,7 +15,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h1',
     name: 'Drink 2.5L Water',
     category: 'Health',
-    emoji: '💧',
+    emoji: 'droplets',
     color: '#0ea5e9', // Sky blue
     targetPerMonth: 28,
     description: 'Stay hydrated — keep a 1L bottle on desk and refill throughout the day',
@@ -24,7 +24,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h2',
     name: 'Morning Workout / Walk',
     category: 'Fitness',
-    emoji: '🏃',
+    emoji: 'activity',
     color: '#10b981', // Emerald
     targetPerMonth: 22,
     description: '30 mins of exercise, jogging, gym or a brisk morning walk',
@@ -33,7 +33,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h3',
     name: 'Read 20 Mins',
     category: 'Learning',
-    emoji: '📚',
+    emoji: 'book-open',
     color: '#6366f1', // Indigo
     targetPerMonth: 25,
     description: 'Read non-fiction, career growth books, or articles without distractions',
@@ -42,7 +42,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h4',
     name: 'Deep Work (2hr Focus)',
     category: 'Productivity',
-    emoji: '⚡',
+    emoji: 'zap',
     color: '#f59e0b', // Amber
     targetPerMonth: 20,
     description: 'Dedicated focus block on high-value tasks with notifications silenced',
@@ -51,7 +51,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h5',
     name: 'Healthy Clean Meals',
     category: 'Health',
-    emoji: '🥗',
+    emoji: 'utensils',
     color: '#ec4899', // Pink
     targetPerMonth: 26,
     description: 'Eat whole foods, vegetables, fruits and avoid junk/sugary snacks',
@@ -60,7 +60,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h6',
     name: '10 Mins Meditation',
     category: 'Mindfulness',
-    emoji: '🧘',
+    emoji: 'smile',
     color: '#8b5cf6', // Violet
     targetPerMonth: 20,
     description: 'Mindful breathing, reflection or gentle stretch before bedtime',
@@ -69,7 +69,7 @@ export const STARTER_HABIT_OPTIONS: StarterHabitOption[] = [
     id: 'h7',
     name: 'Sleep by 11 PM (7-8 hrs)',
     category: 'Lifestyle',
-    emoji: '😴',
+    emoji: 'moon',
     color: '#14b8a6', // Teal
     targetPerMonth: 28,
     description: 'Consistent sleep schedule for optimal energy and recovery',

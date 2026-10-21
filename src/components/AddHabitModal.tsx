@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
+import { AVAILABLE_HABIT_ICONS } from './HabitIcon';
 
 interface AddHabitModalProps {
   isOpen: boolean;
@@ -8,8 +9,6 @@ interface AddHabitModalProps {
   onAddHabit: (habit: Omit<Habit, 'id' | 'createdAt' | 'completions'>) => void;
   daysInMonth: number;
 }
-
-const EMOJI_OPTIONS = ['⚡', '🏋️‍♂️', '📚', '💧', '🧘', '🥗', '✍️', '🏃', '💻', '🎯', '💤', '🌱', '🚴', '🎨', '🧠'];
 
 const COLOR_OPTIONS = [
   { name: 'Emerald', hex: '#10b981' },
@@ -39,7 +38,7 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<HabitCategory>('Productivity');
-  const [emoji, setEmoji] = useState('⚡');
+  const [emoji, setEmoji] = useState('zap');
   const [color, setColor] = useState('#10b981');
   const [targetPerMonth, setTargetPerMonth] = useState(Math.min(22, daysInMonth));
   const [description, setDescription] = useState('');
@@ -142,26 +141,46 @@ export const AddHabitModal: React.FC<AddHabitModalProps> = ({
             </div>
           </div>
 
-          {/* Emoji Picker Swatches */}
+          {/* Premium Vector Icon Picker */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-              Choose Icon / Emoji
-            </label>
-            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-              {EMOJI_OPTIONS.map((e) => (
-                <button
-                  type="button"
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className={`w-8 h-8 rounded-md flex items-center justify-center text-lg transition-all duration-200 ease-in-out active:scale-90 ${
-                    emoji === e
-                      ? 'bg-white dark:bg-slate-700 shadow-sm ring-2 ring-emerald-500 scale-110'
-                      : 'hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:scale-105'
-                  }`}
-                >
-                  {e}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Choose Icon
+              </label>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                Unified Vector Icons
+              </span>
+            </div>
+            <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              {AVAILABLE_HABIT_ICONS.map((item) => {
+                const IconComponent = item.icon;
+                const isSelected = emoji === item.id || emoji === item.id.toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => setEmoji(item.id)}
+                    title={item.label}
+                    className={`h-9 rounded-lg flex items-center justify-center transition-all duration-150 ease-in-out active:scale-95 cursor-pointer ${
+                      isSelected
+                        ? 'shadow-xs scale-105'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/60'
+                    }`}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: `${color}18`,
+                            color: color,
+                            border: `2px solid ${color}`,
+                            boxShadow: `0 0 10px ${color}35`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <IconComponent className="w-4 h-4" strokeWidth={isSelected ? 2.5 : 2} />
+                  </button>
+                );
+              })}
             </div>
           </div>
 

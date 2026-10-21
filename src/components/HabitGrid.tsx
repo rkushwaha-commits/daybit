@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
 import { CalendarDay, calculateHabitStreak } from '../utils/dateUtils';
+import { HabitIcon } from './HabitIcon';
 
 interface HabitGridProps {
   habits: Habit[];
@@ -127,23 +128,36 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   // Today day object if current month contains today
   const todayDay = days.find((d) => d.isToday);
 
-  // Scroll centering state: true when Today is within viewport center, false when user scrolled away
-  const [isTodayCentered, setIsTodayCentered] = useState<boolean>(true);
+  // Table horizontal scroll metrics for minimal hairline indicator
+  const [tableScrollState, setTableScrollState] = useState({
+    scrollLeft: 0,
+    scrollWidth: 1000,
+    clientWidth: 400,
+  });
 
-  // Check whether Today column is currently centered in the table container
-  const checkIsTodayCentered = () => {
-    if (todayThRef.current && tableContainerRef.current) {
-      const container = tableContainerRef.current;
-      const todayEl = todayThRef.current;
-      const stickyColWidth = window.innerWidth < 640 ? 210 : 280;
-      const targetScroll = Math.max(
-        0,
-        todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2
-      );
-      const isClose = Math.abs(container.scrollLeft - targetScroll) < 45;
-      setIsTodayCentered(isClose);
+  const updateTableScrollMetrics = () => {
+    if (tableContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
+      setTableScrollState({ scrollLeft, scrollWidth, clientWidth });
     }
   };
+
+  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tableContainerRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const maxScroll = tableContainerRef.current.scrollWidth - tableContainerRef.current.clientWidth;
+    tableContainerRef.current.scrollTo({
+      left: clickRatio * maxScroll,
+      behavior: 'smooth',
+    });
+  };
+
+  const maxTableScroll = Math.max(1, tableScrollState.scrollWidth - tableScrollState.clientWidth);
+  const canScrollTableLeft = tableScrollState.scrollLeft > 10;
+  const thumbWidthPct = Math.max(12, Math.min(100, (tableScrollState.clientWidth / tableScrollState.scrollWidth) * 100));
+  const availableTrackPct = 100 - thumbWidthPct;
+  const thumbLeftPct = maxTableScroll > 0 ? (tableScrollState.scrollLeft / maxTableScroll) * availableTrackPct : 0;
 
   // Function to smoothly scroll table to the 'Today' column
   const scrollToToday = (behavior: ScrollBehavior = 'smooth') => {
@@ -156,19 +170,26 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
         todayEl.offsetLeft - stickyColWidth - (container.clientWidth - stickyColWidth) / 2 + todayEl.clientWidth / 2
       );
       container.scrollTo({ left: targetScroll, behavior });
-      setIsTodayCentered(true);
+      setTimeout(updateTableScrollMetrics, 100);
     }
   };
 
-  // Auto-scroll to today column when mounted or month changes
+  // Auto-scroll to today column when mounted or month changes, and update metrics
   useEffect(() => {
-    if (todayDay && effectiveView === 'table') {
+    if (effectiveView === 'table') {
       const timer = setTimeout(() => {
-        scrollToToday('smooth');
+        if (todayDay) scrollToToday('smooth');
+        updateTableScrollMetrics();
       }, 250);
       return () => clearTimeout(timer);
     }
   }, [days, todayDay, effectiveView]);
+
+  useEffect(() => {
+    const handleResize = () => updateTableScrollMetrics();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Handle checking a cell with strict accountability checks
   const handleCellClick = (habitId: string, day: CalendarDay, isCurrentlyChecked: boolean) => {
@@ -358,22 +379,10 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
               <button
                 type="button"
                 onClick={() => scrollToToday('smooth')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer ${
-                  !isTodayCentered
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80'
-                }`}
-                title={
-                  !isTodayCentered
-                    ? `Click to center Today (${todayDay.dayOfWeek}, ${todayDay.dateStr})`
-                    : `Today (${todayDay.dayOfWeek}, ${todayDay.dateStr}) is centered`
-                }
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700/60 shadow-2xs transition-colors duration-150 active:scale-95 cursor-pointer"
+                title={`Center view on Today (${todayDay.dayOfWeek}, ${todayDay.dateStr})`}
               >
-                <Target
-                  className={`w-3.5 h-3.5 ${
-                    !isTodayCentered ? 'text-white' : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                />
+                <Target className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Today</span>
               </button>
             )}
@@ -446,14 +455,14 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
 
               {/* Right: Today Centering + Lock Toggle */}
               <div className="flex items-center gap-1.5">
-                {todayDay && effectiveView === 'table' && !isTodayCentered && (
+                {todayDay && effectiveView === 'table' && (
                   <button
                     type="button"
                     onClick={() => scrollToToday('smooth')}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all active:scale-95 cursor-pointer animate-fade-in"
-                    title="Click to center Today"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 shadow-2xs transition-colors duration-150 active:scale-95 cursor-pointer"
+                    title={`Center view on Today (${todayDay.dayOfWeek}, ${todayDay.dateStr})`}
                   >
-                    <Target className="w-3 h-3 text-white" />
+                    <Target className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                     <span>Today</span>
                   </button>
                 )}
@@ -584,15 +593,15 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                             )}
                           </button>
 
-                          {/* Emoji in squircle */}
+                          {/* Habit Icon in squircle */}
                           <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 transition-transform group-hover:scale-105 shadow-2xs"
+                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-2xs"
                             style={{
                               backgroundColor: `${habit.color}15`,
                               border: `1px solid ${habit.color}35`,
                             }}
                           >
-                            {habit.emoji}
+                            <HabitIcon name={habit.emoji} color={habit.color} className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                           </div>
 
                           {/* Title & Metadata */}
@@ -704,13 +713,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div
-                                className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-2xs"
+                                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
                                 style={{
                                   backgroundColor: `${habit.color}15`,
                                   border: `1px solid ${habit.color}35`,
                                 }}
                               >
-                                {habit.emoji}
+                                <HabitIcon name={habit.emoji} color={habit.color} className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h4 className="font-bold text-sm text-slate-900 dark:text-white break-words leading-snug">
@@ -895,18 +904,23 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
         /* ─────────────────────────────────────────────────────────────
             MODE C: FULL SPREADSHEET TABLE VIEW
         ───────────────────────────────────────────────────────────── */
-        <div
-          ref={tableContainerRef}
-          onScroll={checkIsTodayCentered}
-          className="overflow-x-auto relative scrollbar-thin touch-pan-x block"
-        >
+        <div className="relative">
+          <div
+            ref={tableContainerRef}
+            onScroll={updateTableScrollMetrics}
+            className="overflow-x-auto relative scrollbar-none no-scrollbar touch-pan-x block"
+          >
             <table className="w-full border-collapse text-left text-xs">
               {/* Table Header: Column headers & Dates */}
               <thead>
                 <tr className="bg-slate-100/90 dark:bg-slate-900/95 text-slate-700 dark:text-slate-200 border-b border-slate-200/90 dark:border-slate-800 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
                   
                   {/* Sticky Column: Contains "+ Add Habit" button */}
-                  <th className="sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none font-semibold text-slate-700 dark:text-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                  <th className={`sticky left-0 z-20 bg-slate-100 dark:bg-slate-900 px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none font-semibold text-slate-700 dark:text-slate-100 transition-shadow duration-200 ${
+                    canScrollTableLeft
+                      ? 'shadow-[3px_0_8px_-2px_rgba(0,0,0,0.12)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.6)]'
+                      : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]'
+                  }`}>
                     <div className="flex items-center justify-between gap-2">
                       <button
                         onClick={onOpenAddModal}
@@ -1010,16 +1024,20 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group"
                     >
                       {/* Sticky Habit Label Cell */}
-                      <td className="sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
+                      <td className={`sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none transition-all duration-150 ease-in-out ${
+                        canScrollTableLeft
+                          ? 'shadow-[3px_0_8px_-2px_rgba(0,0,0,0.12)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.6)]'
+                          : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]'
+                      }`}>
                         <div className="flex items-center space-x-2 sm:space-x-2.5">
                           <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] w-3.5 text-right font-medium hidden sm:inline-block">
                             {rowIndex + 1}
                           </span>
                           <div
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0 shadow-2xs"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
                             style={{ backgroundColor: `${habit.color}15`, border: `1px solid ${habit.color}40` }}
                           >
-                            {habit.emoji}
+                            <HabitIcon name={habit.emoji} color={habit.color} className="w-3.5 h-3.5" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-bold text-slate-900 dark:text-white text-xs leading-snug break-words">
@@ -1168,7 +1186,11 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 <>
                   {/* Daily Completed Count Row */}
                   <tr className="bg-slate-100/90 dark:bg-slate-900/95 font-bold border-t-2 border-slate-300 dark:border-slate-700 divide-x divide-slate-200/80 dark:divide-slate-800 select-none">
-                    <td className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-900 px-3 py-2 text-slate-800 dark:text-slate-200 text-xs shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                    <td className={`sticky left-0 z-10 bg-slate-100 dark:bg-slate-900 px-3 py-2 text-slate-800 dark:text-slate-200 text-xs transition-shadow duration-200 ${
+                      canScrollTableLeft
+                        ? 'shadow-[3px_0_8px_-2px_rgba(0,0,0,0.12)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.6)]'
+                        : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]'
+                    }`}>
                       <div className="flex items-center space-x-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         <span>Completed</span>
@@ -1205,7 +1227,11 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
 
                   {/* Daily Success % Row */}
                   <tr className="bg-slate-50/90 dark:bg-slate-950/80 text-[11px] font-semibold divide-x divide-slate-200/70 dark:divide-slate-800/80 select-none">
-                    <td className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-slate-600 dark:text-slate-400 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                    <td className={`sticky left-0 z-10 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-slate-600 dark:text-slate-400 transition-shadow duration-200 ${
+                      canScrollTableLeft
+                        ? 'shadow-[3px_0_8px_-2px_rgba(0,0,0,0.12)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.6)]'
+                        : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]'
+                    }`}>
                       <div className="flex items-center space-x-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                         <span>Success %</span>
@@ -1244,7 +1270,27 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
             </tbody>
           </table>
         </div>
-      )}
+
+        {/* Minimalist Hairline Scroll Progress Rail (Only visible when table overflows) */}
+        {tableScrollState.scrollWidth > tableScrollState.clientWidth + 10 && (
+          <div
+            onClick={handleScrubberClick}
+            className="h-2 relative flex items-center px-3 cursor-pointer group/scrub select-none bg-slate-50/70 dark:bg-slate-900/70 border-t border-slate-200/60 dark:border-slate-800/60"
+            title="Click along the rail to scrub across the month"
+          >
+            <div className="w-full h-[2px] group-hover/scrub:h-[3px] bg-slate-200/80 dark:bg-slate-800 rounded-full relative overflow-hidden transition-all duration-150">
+              <div
+                className="absolute top-0 bottom-0 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.45)] transition-[left,width] duration-75"
+                style={{
+                  left: `${thumbLeftPct}%`,
+                  width: `${thumbWidthPct}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    )}
     </div>
   );
 };

@@ -15,6 +15,7 @@ import { signInWithGoogle } from '../lib/supabase';
 import { Theme } from '../hooks/useTheme';
 import { Habit } from '../types/habit';
 import { STARTER_HABIT_OPTIONS, buildHabitsFromStarterIds, DEFAULT_STARTER_HABIT_IDS } from '../data/initialHabits';
+import { HabitIcon } from './HabitIcon';
 
 interface SetupScreenProps {
   theme: Theme;
@@ -290,7 +291,15 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-base shrink-0">{habit.emoji}</span>
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
+                        style={{
+                          backgroundColor: `${habit.color}15`,
+                          border: `1px solid ${habit.color}35`,
+                        }}
+                      >
+                        <HabitIcon name={habit.emoji} color={habit.color} className="w-3.5 h-3.5" />
+                      </div>
                       <span className="text-xs font-semibold truncate">{habit.name}</span>
                     </div>
 
