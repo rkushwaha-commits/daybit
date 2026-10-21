@@ -8,12 +8,14 @@ import { HabitGrid } from './components/HabitGrid';
 import { AddHabitModal } from './components/AddHabitModal';
 import { AuthModal } from './components/AuthModal';
 import GreetingBanner from './components/GreetingBanner';
-import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, Table2, AlertCircle, X } from 'lucide-react';
+import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, AlertCircle, X } from 'lucide-react';
 import HabitChart from './components/HabitChart';
 import { SetupScreen } from './components/SetupScreen';
 import { MobileBottomBar } from './components/MobileBottomBar';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { usePWAInstall } from './hooks/usePWAInstall';
+import { ReminderModal } from './components/ReminderModal';
+import { useHabitReminders } from './hooks/useHabitReminders';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -167,6 +169,18 @@ export default function App() {
   // Category filter state
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+
+  // Daily motivation & streak reminders hook
+  const {
+    settings: reminderSettings,
+    permission: reminderPermission,
+    isSupported: isReminderSupported,
+    enableReminders,
+    disableReminders,
+    updateSettings: updateReminderSettings,
+    sendTestNotification,
+  } = useHabitReminders();
 
   // Sync to localStorage
   useEffect(() => {
@@ -415,9 +429,8 @@ export default function App() {
   if (isAuthChecking) {
     return (
       <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 p-4">
-        <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/25 mb-4 animate-pulse">
-          <Table2 className="h-6 w-6" />
-        </div>
+        <img src="/icons/daybit-emblem.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-sm block dark:hidden" />
+        <img src="/icons/daybit-emblem-dark.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-[0_0_18px_rgba(245,158,11,0.35)] hidden dark:block" />
         <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
           <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
           <span>Signing in & syncing your habits...</span>
@@ -479,6 +492,8 @@ export default function App() {
         activeMobileTab={mobileTab}
         onPromptInstall={promptInstall}
         isStandalone={isStandalone}
+        onOpenReminderModal={() => setIsReminderModalOpen(true)}
+        remindersEnabled={reminderSettings.enabled}
       />
 
       {/* Main Content Area */}
@@ -658,6 +673,19 @@ export default function App() {
         isOpen={isIOSModalOpen}
         onClose={() => setIsIOSModalOpen(false)}
         isIOS={isIOS}
+      />
+
+      {/* Modal for Daily Motivation & Streak Reminders */}
+      <ReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+        settings={reminderSettings}
+        permission={reminderPermission}
+        isSupported={isReminderSupported}
+        onEnable={enableReminders}
+        onDisable={disableReminders}
+        onUpdate={updateReminderSettings}
+        onSendTest={sendTestNotification}
       />
     </div>
   );

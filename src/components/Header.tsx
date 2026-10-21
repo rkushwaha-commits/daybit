@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   RotateCcw,
-  Table2,
   Flame,
   Cloud,
   LogOut,
@@ -12,6 +11,7 @@ import {
   ChevronRight,
   MoreVertical,
   Download,
+  Bell,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Theme } from '../hooks/useTheme';
@@ -35,6 +35,8 @@ interface HeaderProps {
   activeMobileTab?: 'today' | 'grid' | 'stats';
   onPromptInstall?: () => void;
   isStandalone?: boolean;
+  onOpenReminderModal?: () => void;
+  remindersEnabled?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -55,6 +57,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeMobileTab = 'today',
   onPromptInstall,
   isStandalone = false,
+  onOpenReminderModal,
+  remindersEnabled = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
 
@@ -106,14 +110,26 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex md:hidden flex-col gap-2">
           {/* Top Row: Logo + Streak + Three Dots Menu */}
           <div className="flex items-center justify-between gap-2">
-            {/* Logo */}
-            <div className="flex items-center space-x-2 shrink-0">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-xs">
-                <Table2 className="h-3.5 w-3.5" />
+            {/* Brand Logo & Wordmark Lockup (Mobile) */}
+            <div className="flex items-center gap-2 select-none shrink-0 cursor-pointer">
+              <img
+                src="/icons/daybit-emblem.png"
+                alt="Daybit"
+                className="w-7 h-7 object-contain shrink-0 drop-shadow-xs block dark:hidden"
+              />
+              <img
+                src="/icons/daybit-emblem-dark.png"
+                alt="Daybit"
+                className="w-7 h-7 object-contain shrink-0 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] hidden dark:block"
+              />
+              <div className="flex items-center font-black tracking-[-0.03em] text-[1.1rem] leading-none select-none">
+                <span className="text-slate-900 dark:text-white transition-colors duration-200">
+                  Day
+                </span>
+                <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-yellow-300 bg-clip-text text-transparent">
+                  bit
+                </span>
               </div>
-              <h1 className="text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-0.5">
-                Day<span className="text-emerald-500">bit</span>
-              </h1>
             </div>
 
             {/* Right Action Icons */}
@@ -162,6 +178,25 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </button>
 
+                      {/* Reminders / Notifications */}
+                      <button
+                        onClick={() => { setIsMobileMenuOpen(false); onOpenReminderModal?.(); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                        role="menuitem"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-emerald-500" />
+                          <span>Reminders</span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          remindersEnabled
+                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {remindersEnabled ? 'On' : 'Off'}
+                        </span>
+                      </button>
+
                       {/* Install App (PWA) */}
                       {!isStandalone && onPromptInstall && (
                         <button
@@ -178,35 +213,33 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
                     </div>
 
-                    <div className="p-1">
-                      {user ? (
-                        <>
-                          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800/60 mb-1">
-                            <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                              {displayName}
-                            </div>
-                            {user.email && (
-                              <div
-                                className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5"
-                                title={`Syncing to ${user.email}`}
-                              >
-                                <Cloud className="w-3 h-3 text-emerald-500/80 shrink-0" />
-                                <span className="truncate">{user.email}</span>
-                              </div>
-                            )}
+                    {user ? (
+                      <>
+                        {/* Pure Minimal User Account Header */}
+                        <div className="px-3.5 py-2.5">
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                            {displayName}
                           </div>
+                          {user.email && (
+                            <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                              {user.email}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-1">
                           <button
                             onClick={() => { setIsMobileMenuOpen(false); onSignOut(); }}
-                            className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
                             role="menuitem"
                           >
-                            <div className="flex items-center gap-2">
-                              <LogOut className="w-4 h-4" />
-                              <span>Sign Out</span>
-                            </div>
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span>Sign Out</span>
                           </button>
-                        </>
-                      ) : (
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-1">
                         <button
                           onClick={() => { setIsMobileMenuOpen(false); onOpenAuthModal(); }}
                           className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl cursor-pointer"
@@ -218,8 +251,8 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">Sign In</span>
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -277,14 +310,26 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="hidden md:flex md:items-center md:justify-between gap-3">
           {/* Left: Brand Logo + Month Navigation */}
           <div className="flex items-center gap-4">
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25 ring-1 ring-white/20 shrink-0">
-                <Table2 className="h-4 w-4" />
+            {/* Brand Logo & Wordmark Lockup */}
+            <div className="flex items-center gap-2.5 select-none shrink-0 cursor-pointer group transition-opacity hover:opacity-95">
+              <img
+                src="/icons/daybit-emblem.png"
+                alt="Daybit"
+                className="w-8 h-8 object-contain shrink-0 drop-shadow-xs transition-transform duration-300 group-hover:scale-105 block dark:hidden"
+              />
+              <img
+                src="/icons/daybit-emblem-dark.png"
+                alt="Daybit"
+                className="w-8 h-8 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(245,158,11,0.3)] transition-transform duration-300 group-hover:scale-105 hidden dark:block"
+              />
+              <div className="flex items-center font-black tracking-[-0.035em] text-[1.25rem] leading-none select-none">
+                <span className="text-slate-900 dark:text-white transition-colors duration-200">
+                  Day
+                </span>
+                <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-yellow-300 bg-clip-text text-transparent drop-shadow-xs">
+                  bit
+                </span>
               </div>
-              <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1 select-none">
-                Day<span className="text-emerald-500">bit</span>
-              </h1>
             </div>
 
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-700/80" />
@@ -388,6 +433,25 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
 
+                    {/* Reminders / Notifications */}
+                    <button
+                      onClick={() => { setIsDesktopMenuOpen(false); onOpenReminderModal?.(); }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
+                      role="menuitem"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-emerald-500" />
+                        <span>Reminders</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        remindersEnabled
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {remindersEnabled ? 'On' : 'Off'}
+                      </span>
+                    </button>
+
                     {/* Install App (PWA) */}
                     {!isStandalone && onPromptInstall && (
                       <button
@@ -404,35 +468,33 @@ export const Header: React.FC<HeaderProps> = ({
                     )}
                   </div>
 
-                  <div className="p-1">
-                    {user ? (
-                      <>
-                        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800/60 mb-1">
-                          <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                            {displayName}
-                          </div>
-                          {user.email && (
-                            <div
-                              className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5"
-                              title={`Syncing to ${user.email}`}
-                            >
-                              <Cloud className="w-3 h-3 text-emerald-500/80 shrink-0" />
-                              <span className="truncate">{user.email}</span>
-                            </div>
-                          )}
+                  {user ? (
+                    <>
+                      {/* Pure Minimal User Account Header */}
+                      <div className="px-3.5 py-2.5">
+                        <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                          {displayName}
                         </div>
+                        {user.email && (
+                          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                            {user.email}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-1">
                         <button
                           onClick={() => { setIsDesktopMenuOpen(false); onSignOut(); }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer"
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl cursor-pointer transition-colors"
                           role="menuitem"
                         >
-                          <div className="flex items-center gap-2">
-                            <LogOut className="w-4 h-4" />
-                            <span>Sign Out</span>
-                          </div>
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
                         </button>
-                      </>
-                    ) : (
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-1">
                       <button
                         onClick={() => { setIsDesktopMenuOpen(false); onOpenAuthModal(); }}
                         className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl cursor-pointer"
@@ -444,8 +506,8 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">Sign In</span>
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

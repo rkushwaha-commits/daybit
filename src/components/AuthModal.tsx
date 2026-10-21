@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, AlertCircle, Cloud, ShieldCheck, Smartphone, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Cloud, ShieldCheck, Smartphone, Loader2 } from 'lucide-react';
 import { signInWithGoogle } from '../lib/supabase';
 
 interface AuthModalProps {
@@ -37,12 +37,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Header */}
         <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 shrink-0">
           <div className="flex items-center space-x-2.5">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
-              <Sparkles className="w-4 h-4" />
-            </div>
+            <img src="/icons/daybit-emblem.png" alt="Daybit" className="h-9 w-9 object-contain shrink-0 drop-shadow-xs block dark:hidden" />
+            <img src="/icons/daybit-emblem-dark.png" alt="Daybit" className="h-9 w-9 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(245,158,11,0.3)] hidden dark:block" />
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Sign In to Daybit
+              <h3 className="text-base font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-0.5">
+                Sign In to Day<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">bit</span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Sync your habits everywhere</p>
             </div>
