@@ -1,6 +1,6 @@
 // Daybit Service Worker for Progressive Web App (PWA)
-// Version: 2.2.0
-const CACHE_NAME = 'daybit-cache-v4';
+// Version: 2.5.0
+const CACHE_NAME = 'daybit-cache-v7';
 
 const STATIC_PRECACHE = [
   '/',
