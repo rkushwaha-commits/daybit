@@ -1,15 +1,17 @@
 // Daybit Service Worker for Progressive Web App (PWA)
-// Version: 1.0.0
-const CACHE_NAME = 'daybit-cache-v1';
+// Version: 2.2.0
+const CACHE_NAME = 'daybit-cache-v4';
 
 const STATIC_PRECACHE = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',
   '/icons/daybit-emblem.png',
+  '/icons/daybit-emblem-dark.png',
   '/favicon.png'
 ];
 
@@ -108,23 +110,4 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-});
-
-// Handle notification click to focus or open Daybit
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
-
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          return client.focus();
-        }
-      }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
-      }
-    })
-  );
 });

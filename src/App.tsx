@@ -14,8 +14,6 @@ import { SetupScreen } from './components/SetupScreen';
 import { MobileBottomBar } from './components/MobileBottomBar';
 import { PWAInstallModal } from './components/PWAInstallModal';
 import { usePWAInstall } from './hooks/usePWAInstall';
-import { ReminderModal } from './components/ReminderModal';
-import { useHabitReminders } from './hooks/useHabitReminders';
 import { User } from '@supabase/supabase-js';
 import { useTheme } from './hooks/useTheme';
 import {
@@ -45,6 +43,7 @@ export default function App() {
   const {
     isStandalone,
     isIOS,
+    canDirectInstall,
     promptInstall,
     isIOSModalOpen,
     setIsIOSModalOpen,
@@ -169,18 +168,6 @@ export default function App() {
   // Category filter state
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-
-  // Daily motivation & streak reminders hook
-  const {
-    settings: reminderSettings,
-    permission: reminderPermission,
-    isSupported: isReminderSupported,
-    enableReminders,
-    disableReminders,
-    updateSettings: updateReminderSettings,
-    sendTestNotification,
-  } = useHabitReminders();
 
   // Sync to localStorage
   useEffect(() => {
@@ -492,8 +479,6 @@ export default function App() {
         activeMobileTab={mobileTab}
         onPromptInstall={promptInstall}
         isStandalone={isStandalone}
-        onOpenReminderModal={() => setIsReminderModalOpen(true)}
-        remindersEnabled={reminderSettings.enabled}
       />
 
       {/* Main Content Area */}
@@ -673,19 +658,8 @@ export default function App() {
         isOpen={isIOSModalOpen}
         onClose={() => setIsIOSModalOpen(false)}
         isIOS={isIOS}
-      />
-
-      {/* Modal for Daily Motivation & Streak Reminders */}
-      <ReminderModal
-        isOpen={isReminderModalOpen}
-        onClose={() => setIsReminderModalOpen(false)}
-        settings={reminderSettings}
-        permission={reminderPermission}
-        isSupported={isReminderSupported}
-        onEnable={enableReminders}
-        onDisable={disableReminders}
-        onUpdate={updateReminderSettings}
-        onSendTest={sendTestNotification}
+        onInstall={promptInstall}
+        canDirectInstall={canDirectInstall}
       />
     </div>
   );

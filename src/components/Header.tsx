@@ -11,7 +11,6 @@ import {
   ChevronRight,
   MoreVertical,
   Download,
-  Bell,
   User as UserIcon,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
@@ -36,8 +35,6 @@ interface HeaderProps {
   activeMobileTab?: 'today' | 'grid' | 'stats';
   onPromptInstall?: () => void;
   isStandalone?: boolean;
-  onOpenReminderModal?: () => void;
-  remindersEnabled?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -58,8 +55,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeMobileTab = 'today',
   onPromptInstall,
   isStandalone = false,
-  onOpenReminderModal,
-  remindersEnabled = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
 
@@ -176,25 +171,6 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
                           {theme}
-                        </span>
-                      </button>
-
-                      {/* Reminders / Notifications */}
-                      <button
-                        onClick={() => { setIsMobileMenuOpen(false); onOpenReminderModal?.(); }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                        role="menuitem"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Bell className="w-4 h-4 text-emerald-500" />
-                          <span>Reminders</span>
-                        </div>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          remindersEnabled
-                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          {remindersEnabled ? 'On' : 'Off'}
                         </span>
                       </button>
 
@@ -441,25 +417,6 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 capitalize">
                         {theme}
-                      </span>
-                    </button>
-
-                    {/* Reminders / Notifications */}
-                    <button
-                      onClick={() => { setIsDesktopMenuOpen(false); onOpenReminderModal?.(); }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl cursor-pointer"
-                      role="menuitem"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4 text-emerald-500" />
-                        <span>Reminders</span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                        remindersEnabled
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                      }`}>
-                        {remindersEnabled ? 'On' : 'Off'}
                       </span>
                     </button>
 
