@@ -1,18 +1,17 @@
 // Daybit Service Worker for Progressive Web App (PWA)
-// Version: 2.5.0
-const CACHE_NAME = 'daybit-cache-v7';
+// Version: 2.7.0
+const CACHE_NAME = 'daybit-cache-v9';
 
 const STATIC_PRECACHE = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png',
-  '/icons/daybit-emblem.png',
-  '/icons/daybit-emblem-dark.png',
-  '/favicon.png'
+  '/icons/flame-icon-192.png',
+  '/icons/flame-icon-512.png',
+  '/icons/flame-maskable-192.png',
+  '/icons/flame-maskable-512.png',
+  '/icons/flame-apple-touch-icon.png',
+  '/icons/flame-emblem.png',
+  '/flame-favicon.png'
 ];
 
 // Install: Cache initial app shell and skip waiting immediately
@@ -41,7 +40,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch handler: Stale-while-revalidate for local static assets, Network-only for Supabase/APIs
+// Fetch handler: Stale-while-revalidate for local static assets, Network-only for Supabase/APIs/Manifest
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
@@ -51,12 +50,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Never cache Supabase, analytics, auth, or external API calls
+  // 1. Never cache Supabase, analytics, auth, or manifest files (manifest must always stay fresh)
   if (
     url.hostname.includes('supabase.co') ||
     url.pathname.startsWith('/rest/') ||
     url.pathname.startsWith('/auth/') ||
-    url.pathname.startsWith('/realtime/')
+    url.pathname.startsWith('/realtime/') ||
+    url.pathname.includes('manifest')
   ) {
     return; // Standard network fetch
   }

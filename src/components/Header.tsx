@@ -109,12 +109,12 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Brand Logo & Wordmark Lockup (Mobile) */}
             <div className="flex items-center gap-2 select-none shrink-0 cursor-pointer">
               <img
-                src="/icons/daybit-emblem.png"
+                src="/icons/flame-emblem.png"
                 alt="Daybit"
                 className="w-7 h-7 object-contain shrink-0 drop-shadow-xs block dark:hidden"
               />
               <img
-                src="/icons/daybit-emblem-dark.png"
+                src="/icons/flame-emblem.png"
                 alt="Daybit"
                 className="w-7 h-7 object-contain shrink-0 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] hidden dark:block"
               />
@@ -300,12 +300,12 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Brand Logo & Wordmark Lockup */}
             <div className="flex items-center gap-2.5 select-none shrink-0 cursor-pointer group transition-opacity hover:opacity-95">
               <img
-                src="/icons/daybit-emblem.png"
+                src="/icons/flame-emblem.png"
                 alt="Daybit"
                 className="w-8 h-8 object-contain shrink-0 drop-shadow-xs transition-transform duration-300 group-hover:scale-105 block dark:hidden"
               />
               <img
-                src="/icons/daybit-emblem-dark.png"
+                src="/icons/flame-emblem.png"
                 alt="Daybit"
                 className="w-8 h-8 object-contain shrink-0 drop-shadow-[0_0_12px_rgba(245,158,11,0.3)] transition-transform duration-300 group-hover:scale-105 hidden dark:block"
               />

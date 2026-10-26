@@ -40,16 +40,16 @@ export const PWAInstallModal: React.FC<PWAInstallModalProps> = ({
         {/* Header with App Icon */}
         <div className="flex items-center gap-3 mb-4">
           <img
-            src="/icons/icon-192.png"
+            src="/icons/flame-icon-192.png?v=2"
             alt="Daybit Icon"
-            className="w-12 h-12 rounded-2xl shadow-sm border border-emerald-500/20 shrink-0"
+            className="w-12 h-12 rounded-2xl shadow-sm border border-amber-500/30 dark:border-amber-500/20 shrink-0"
           />
           <div>
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
-              Install Daybit App
+              Daybit — Build Better Habits
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Free • Standalone Home Screen App
+              Install App • Free Standalone Experience
             </p>
           </div>
         </div>

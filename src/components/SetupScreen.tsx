@@ -184,8 +184,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           <div className="space-y-6">
             {/* Clean Hero */}
             <div className="text-center pt-2">
-              <img src="/icons/daybit-emblem.png" alt="Daybit" className="w-16 h-16 object-contain mx-auto mb-3.5 drop-shadow-sm block dark:hidden" />
-              <img src="/icons/daybit-emblem-dark.png" alt="Daybit" className="w-16 h-16 object-contain mx-auto mb-3.5 drop-shadow-[0_0_20px_rgba(245,158,11,0.3)] hidden dark:block" />
+              <img src="/icons/flame-emblem.png" alt="Daybit" className="w-16 h-16 object-contain mx-auto mb-3.5 drop-shadow-sm block dark:hidden" />
+              <img src="/icons/flame-emblem.png" alt="Daybit" className="w-16 h-16 object-contain mx-auto mb-3.5 drop-shadow-[0_0_20px_rgba(245,158,11,0.3)] hidden dark:block" />
               <h1 className="text-2xl font-black tracking-[-0.03em] text-slate-900 dark:text-white flex items-center justify-center gap-0.5">
                 Day<span className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 dark:from-amber-400 dark:via-orange-400 dark:to-yellow-300 bg-clip-text text-transparent">bit</span>
               </h1>

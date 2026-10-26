@@ -48,6 +48,15 @@ export default function App() {
     isIOSModalOpen,
     setIsIOSModalOpen,
   } = usePWAInstall();
+
+  // Dynamic Window Title: Clean "Daybit" in installed standalone app, tagline in web browser
+  useEffect(() => {
+    if (isStandalone) {
+      document.title = 'Daybit';
+    } else {
+      document.title = 'Daybit — Build Better Habits';
+    }
+  }, [isStandalone]);
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const hasHash = window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
@@ -416,8 +425,8 @@ export default function App() {
   if (isAuthChecking) {
     return (
       <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 p-4">
-        <img src="/icons/daybit-emblem.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-sm block dark:hidden" />
-        <img src="/icons/daybit-emblem-dark.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-[0_0_18px_rgba(245,158,11,0.35)] hidden dark:block" />
+        <img src="/icons/flame-emblem.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-sm block dark:hidden" />
+        <img src="/icons/flame-emblem.png" alt="Daybit" className="h-14 w-14 object-contain mb-4 animate-pulse drop-shadow-[0_0_18px_rgba(245,158,11,0.35)] hidden dark:block" />
         <div className="flex items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
           <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
           <span>Signing in & syncing your habits...</span>
