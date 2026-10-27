@@ -122,41 +122,56 @@ export const fetchCloudHabits = async (userId: string): Promise<Habit[]> => {
 
 export const upsertCloudHabit = async (userId: string, habit: Habit): Promise<void> => {
   const row = habitToDbRow(habit, userId);
-  // Try upserting with onConflict: 'user_id,id', fallback to 'id' if table uses legacy pkey
-  let { error } = await supabase
+  
+  // 1. Primary strategy: composite key (user_id, id)
+  let result = await supabase
     .from('habits')
     .upsert(row, { onConflict: 'user_id,id' });
 
-  if (error && error.code === '42P10') {
-    const fallback = await supabase
+  // 2. Fallback strategy: legacy single 'id' primary key
+  if (result.error) {
+    console.warn('[Daybit Sync] Composite upsert failed, trying onConflict id:', result.error.message);
+    result = await supabase
       .from('habits')
       .upsert(row, { onConflict: 'id' });
-    error = fallback.error;
   }
 
-  if (error) {
-    console.error('Error saving habit to cloud:', error);
-    throw error;
+  // 3. Fallback strategy: direct UPDATE if row already exists
+  if (result.error) {
+    console.warn('[Daybit Sync] Upsert failed, trying direct update:', result.error.message);
+    result = await supabase
+      .from('habits')
+      .update(row)
+      .eq('id', habit.id)
+      .eq('user_id', userId);
+  }
+
+  if (result.error) {
+    console.error('[Daybit Sync] All save attempts failed for habit:', habit.id, result.error);
+    throw result.error;
   }
 };
 
 export const upsertAllCloudHabits = async (userId: string, habits: Habit[]): Promise<void> => {
   if (habits.length === 0) return;
   const rows = habits.map((h) => habitToDbRow(h, userId));
-  let { error } = await supabase
+  
+  // 1. Primary strategy: composite key (user_id, id)
+  let result = await supabase
     .from('habits')
     .upsert(rows, { onConflict: 'user_id,id' });
 
-  if (error && error.code === '42P10') {
-    const fallback = await supabase
+  // 2. Fallback strategy: legacy single 'id' primary key
+  if (result.error) {
+    console.warn('[Daybit Sync] Composite bulk upsert failed, trying onConflict id:', result.error.message);
+    result = await supabase
       .from('habits')
       .upsert(rows, { onConflict: 'id' });
-    error = fallback.error;
   }
 
-  if (error) {
-    console.error('Error bulk uploading habits to cloud:', error);
-    throw error;
+  if (result.error) {
+    console.error('[Daybit Sync] Bulk save failed:', result.error);
+    throw result.error;
   }
 };
 

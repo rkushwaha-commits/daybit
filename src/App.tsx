@@ -201,14 +201,16 @@ export default function App() {
         }
       } else {
         // If user has no habits in the cloud yet, migrate their existing local habits!
-        setHabits((current) => {
-          if (current.length > 0) {
-            upsertAllCloudHabits(userId, current).catch((e) =>
-              console.error('[Daybit Sync] Failed to seed initial cloud habits:', e)
-            );
+        try {
+          const localSaved = localStorage.getItem(LOCAL_STORAGE_KEY);
+          const initialToUpload = localSaved ? JSON.parse(localSaved) : getDefaultHabits();
+          if (Array.isArray(initialToUpload) && initialToUpload.length > 0) {
+            await upsertAllCloudHabits(userId, initialToUpload);
+            setHabits(initialToUpload);
           }
-          return current;
-        });
+        } catch (seedErr) {
+          console.error('[Daybit Sync] Failed to seed initial cloud habits:', seedErr);
+        }
       }
     } catch (err) {
       console.error('[Daybit Sync] Error fetching habits from cloud:', err);
@@ -400,10 +402,10 @@ export default function App() {
 
   // Handlers
   const handleToggleHabit = (habitId: string, dateStr: string) => {
-    let habitToSync: Habit | null = null;
+    let syncedHabit: Habit | null = null;
 
-    setHabits((prev) =>
-      prev.map((h) => {
+    setHabits((prev) => {
+      const updated = prev.map((h) => {
         if (h.id !== habitId) return h;
         const currentVal = Boolean(h.completions[dateStr]);
         const updatedCompletions = { ...h.completions };
@@ -416,15 +418,41 @@ export default function App() {
           ...h,
           completions: updatedCompletions,
         };
-        habitToSync = updatedHabit;
+        syncedHabit = updatedHabit;
         return updatedHabit;
-      })
-    );
+      });
+      return updated;
+    });
 
-    if (user && habitToSync) {
+    // Also look up from current habits synchronously in case state updater was deferred
+    const currentHabit = habits.find((h) => h.id === habitId);
+    const targetHabitToSync = syncedHabit || (currentHabit ? {
+      ...currentHabit,
+      completions: {
+        ...currentHabit.completions,
+        [dateStr]: !currentHabit.completions[dateStr] ? true : undefined
+      }
+    } : null);
+
+    if (user && targetHabitToSync) {
       setIsSyncing(true);
-      upsertCloudHabit(user.id, habitToSync)
-        .catch((err) => console.error('[Daybit Sync] Habit toggle sync failed:', err))
+      // Clean undefined keys
+      const cleanCompletions: Record<string, boolean> = {};
+      Object.entries(targetHabitToSync.completions).forEach(([k, v]) => {
+        if (v) cleanCompletions[k] = true;
+      });
+      const habitPayload: Habit = {
+        ...targetHabitToSync,
+        completions: cleanCompletions,
+      };
+
+      upsertCloudHabit(user.id, habitPayload)
+        .then(() => {
+          console.log('[Daybit Sync] Habit toggle synced successfully:', habitId);
+        })
+        .catch((err) => {
+          console.error('[Daybit Sync] Habit toggle sync failed:', err);
+        })
         .finally(() => setIsSyncing(false));
     }
   };
