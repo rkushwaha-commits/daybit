@@ -122,9 +122,17 @@ export const fetchCloudHabits = async (userId: string): Promise<Habit[]> => {
 
 export const upsertCloudHabit = async (userId: string, habit: Habit): Promise<void> => {
   const row = habitToDbRow(habit, userId);
-  const { error } = await supabase
+  // Try upserting with onConflict: 'user_id,id', fallback to 'id' if table uses legacy pkey
+  let { error } = await supabase
     .from('habits')
-    .upsert(row, { onConflict: 'id' });
+    .upsert(row, { onConflict: 'user_id,id' });
+
+  if (error && error.code === '42P10') {
+    const fallback = await supabase
+      .from('habits')
+      .upsert(row, { onConflict: 'id' });
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('Error saving habit to cloud:', error);
@@ -135,9 +143,16 @@ export const upsertCloudHabit = async (userId: string, habit: Habit): Promise<vo
 export const upsertAllCloudHabits = async (userId: string, habits: Habit[]): Promise<void> => {
   if (habits.length === 0) return;
   const rows = habits.map((h) => habitToDbRow(h, userId));
-  const { error } = await supabase
+  let { error } = await supabase
     .from('habits')
-    .upsert(rows, { onConflict: 'id' });
+    .upsert(rows, { onConflict: 'user_id,id' });
+
+  if (error && error.code === '42P10') {
+    const fallback = await supabase
+      .from('habits')
+      .upsert(rows, { onConflict: 'id' });
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('Error bulk uploading habits to cloud:', error);

@@ -194,17 +194,24 @@ export default function App() {
       const cloudHabits = await fetchCloudHabits(userId);
       if (cloudHabits && cloudHabits.length > 0) {
         setHabits(cloudHabits);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudHabits));
+        } catch (e) {
+          console.warn('[Daybit Sync] Local storage cache warning:', e);
+        }
       } else {
         // If user has no habits in the cloud yet, migrate their existing local habits!
         setHabits((current) => {
           if (current.length > 0) {
-            upsertAllCloudHabits(userId, current).catch(console.error);
+            upsertAllCloudHabits(userId, current).catch((e) =>
+              console.error('[Daybit Sync] Failed to seed initial cloud habits:', e)
+            );
           }
           return current;
         });
       }
     } catch (err) {
-      console.warn('Could not sync with Supabase cloud (table might not exist yet):', err);
+      console.error('[Daybit Sync] Error fetching habits from cloud:', err);
     } finally {
       setIsSyncing(false);
     }
@@ -289,6 +296,51 @@ export default function App() {
     };
   }, [loadAndSyncUserHabits]);
 
+  // ── Realtime Cross-Device Sync: instantly reflect ticks & habits across all open devices ──
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`public:habits:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habits',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Instantly refresh habits across all open devices when any change occurs in Supabase
+          loadAndSyncUserHabits(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, loadAndSyncUserHabits]);
+
+  // ── Auto-refetch when user switches tabs or returns to app on any device ──
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSyncOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadAndSyncUserHabits(user.id);
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleSyncOnVisible);
+    window.addEventListener('focus', handleSyncOnVisible);
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleSyncOnVisible);
+      window.removeEventListener('focus', handleSyncOnVisible);
+    };
+  }, [user, loadAndSyncUserHabits]);
+
 
 
   // Categories list derived from habits
@@ -348,6 +400,8 @@ export default function App() {
 
   // Handlers
   const handleToggleHabit = (habitId: string, dateStr: string) => {
+    let habitToSync: Habit | null = null;
+
     setHabits((prev) =>
       prev.map((h) => {
         if (h.id !== habitId) return h;
@@ -362,32 +416,42 @@ export default function App() {
           ...h,
           completions: updatedCompletions,
         };
-        // Asynchronously sync to Supabase cloud if logged in
-        if (user) {
-          upsertCloudHabit(user.id, updatedHabit).catch(console.error);
-        }
+        habitToSync = updatedHabit;
         return updatedHabit;
       })
     );
+
+    if (user && habitToSync) {
+      setIsSyncing(true);
+      upsertCloudHabit(user.id, habitToSync)
+        .catch((err) => console.error('[Daybit Sync] Habit toggle sync failed:', err))
+        .finally(() => setIsSyncing(false));
+    }
   };
 
   const handleAddHabit = (newHabitData: Omit<Habit, 'id' | 'createdAt' | 'completions'>) => {
     const newHabit: Habit = {
       ...newHabitData,
-      id: `habit_${Date.now()}`,
+      id: `habit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString(),
       completions: {},
     };
     setHabits((prev) => [newHabit, ...prev]);
     if (user) {
-      upsertCloudHabit(user.id, newHabit).catch(console.error);
+      setIsSyncing(true);
+      upsertCloudHabit(user.id, newHabit)
+        .catch((err) => console.error('[Daybit Sync] Add habit sync failed:', err))
+        .finally(() => setIsSyncing(false));
     }
   };
 
   const handleDeleteHabit = (habitId: string) => {
     setHabits((prev) => prev.filter((h) => h.id !== habitId));
     if (user) {
-      deleteCloudHabit(user.id, habitId).catch(console.error);
+      setIsSyncing(true);
+      deleteCloudHabit(user.id, habitId)
+        .catch((err) => console.error('[Daybit Sync] Delete habit sync failed:', err))
+        .finally(() => setIsSyncing(false));
     }
   };
 
@@ -395,6 +459,14 @@ export default function App() {
     try {
       await signOut();
       setUser(null);
+      // Reset local state to default template habits so guest session starts clean
+      const defaults = getDefaultHabits();
+      setHabits(defaults);
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      } catch (e) {
+        console.warn('Failed to clear local storage on signout', e);
+      }
     } catch (err) {
       console.error('Error signing out:', err);
     }
