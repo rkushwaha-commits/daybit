@@ -6,6 +6,7 @@ import { Header } from './components/Header';
 import { HabitStats } from './components/HabitStats';
 import { HabitGrid } from './components/HabitGrid';
 import { AddHabitModal } from './components/AddHabitModal';
+import { EditHabitModal } from './components/EditHabitModal';
 import { AuthModal } from './components/AuthModal';
 import GreetingBanner from './components/GreetingBanner';
 import { Sparkles, FileSpreadsheet, ShieldCheck, Loader2, AlertCircle, X } from 'lucide-react';
@@ -177,6 +178,8 @@ export default function App() {
   // Category filter state
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   // Sync to localStorage
   useEffect(() => {
@@ -193,6 +196,22 @@ export default function App() {
     try {
       const cloudHabits = await fetchCloudHabits(userId);
       if (cloudHabits && cloudHabits.length > 0) {
+        // Preserve locally saved habit order if available
+        try {
+          const localSaved = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (localSaved) {
+            const localHabits: Habit[] = JSON.parse(localSaved);
+            const orderMap = new Map(localHabits.map((h, i) => [h.id, i]));
+            cloudHabits.sort((a, b) => {
+              const orderA = orderMap.has(a.id) ? orderMap.get(a.id)! : 999;
+              const orderB = orderMap.has(b.id) ? orderMap.get(b.id)! : 999;
+              return orderA - orderB;
+            });
+          }
+        } catch (sortErr) {
+          console.warn('[Daybit Sync] Local order sort warning:', sortErr);
+        }
+
         setHabits(cloudHabits);
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudHabits));
@@ -483,6 +502,50 @@ export default function App() {
     }
   };
 
+  const handleEditHabit = (updatedHabit: Habit) => {
+    setHabits((prev) =>
+      prev.map((h) => (h.id === updatedHabit.id ? updatedHabit : h))
+    );
+    if (user) {
+      setIsSyncing(true);
+      upsertCloudHabit(user.id, updatedHabit)
+        .then(() => {
+          console.log('[Daybit Sync] Habit updated successfully in cloud:', updatedHabit.id);
+        })
+        .catch((err) => {
+          console.error('[Daybit Sync] Habit update failed:', err);
+        })
+        .finally(() => setIsSyncing(false));
+    }
+  };
+
+  const handleReorderHabits = (reorderedHabits: Habit[]) => {
+    let newMasterHabits: Habit[];
+    if (selectedCategory === 'all') {
+      newMasterHabits = reorderedHabits;
+    } else {
+      let reorderedIdx = 0;
+      newMasterHabits = habits.map((h) => {
+        if (h.category === selectedCategory) {
+          return reorderedHabits[reorderedIdx++];
+        }
+        return h;
+      });
+    }
+    setHabits(newMasterHabits);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newMasterHabits));
+    } catch (e) {
+      console.warn('Failed to save reordered habits to localStorage:', e);
+    }
+    if (user) {
+      setIsSyncing(true);
+      upsertAllCloudHabits(user.id, newMasterHabits)
+        .catch((err) => console.error('[Daybit Sync] Reorder sync failed:', err))
+        .finally(() => setIsSyncing(false));
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -588,6 +651,8 @@ export default function App() {
         activeMobileTab={mobileTab}
         onPromptInstall={promptInstall}
         isStandalone={isStandalone}
+        onToggleReorderMode={() => setIsReorderMode((prev) => !prev)}
+        isReorderMode={isReorderMode}
       />
 
       {/* Main Content Area */}
@@ -605,7 +670,11 @@ export default function App() {
                 habits={filteredHabits}
                 days={days}
                 onToggleHabit={handleToggleHabit}
+                onEditHabit={(habit) => setEditingHabit(habit)}
                 onDeleteHabit={handleDeleteHabit}
+                onReorderHabits={handleReorderHabits}
+                isReorderMode={isReorderMode}
+                onExitReorderMode={() => setIsReorderMode(false)}
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
@@ -623,7 +692,11 @@ export default function App() {
                 habits={filteredHabits}
                 days={days}
                 onToggleHabit={handleToggleHabit}
+                onEditHabit={(habit) => setEditingHabit(habit)}
                 onDeleteHabit={handleDeleteHabit}
+                onReorderHabits={handleReorderHabits}
+                isReorderMode={isReorderMode}
+                onExitReorderMode={() => setIsReorderMode(false)}
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
@@ -683,7 +756,11 @@ export default function App() {
             habits={filteredHabits}
             days={days}
             onToggleHabit={handleToggleHabit}
+            onEditHabit={(habit) => setEditingHabit(habit)}
             onDeleteHabit={handleDeleteHabit}
+            onReorderHabits={handleReorderHabits}
+            isReorderMode={isReorderMode}
+            onExitReorderMode={() => setIsReorderMode(false)}
             categories={categories}
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
@@ -752,6 +829,15 @@ export default function App() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddHabit={handleAddHabit}
+        daysInMonth={days.length}
+      />
+
+      {/* Modal for Editing Existing Habit */}
+      <EditHabitModal
+        isOpen={Boolean(editingHabit)}
+        habit={editingHabit}
+        onClose={() => setEditingHabit(null)}
+        onSaveHabit={handleEditHabit}
         daysInMonth={days.length}
       />
 

@@ -13,6 +13,7 @@ import {
   MoreVertical,
   Download,
   User as UserIcon,
+  ArrowUpDown,
 } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Theme } from '../hooks/useTheme';
@@ -36,6 +37,8 @@ interface HeaderProps {
   activeMobileTab?: 'today' | 'grid' | 'stats';
   onPromptInstall?: () => void;
   isStandalone?: boolean;
+  onToggleReorderMode?: () => void;
+  isReorderMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,6 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
   activeMobileTab = 'today',
   onPromptInstall,
   isStandalone = false,
+  onToggleReorderMode,
+  isReorderMode = false,
 }) => {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '';
 
@@ -174,6 +179,30 @@ export const Header: React.FC<HeaderProps> = ({
                     className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800"
                   >
                     <div className="p-1">
+                      {/* Reorder Habits Action */}
+                      {onToggleReorderMode && (
+                        <button
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            onToggleReorderMode();
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer transition-colors ${
+                            isReorderMode
+                              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold'
+                              : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-indigo-600 dark:hover:text-indigo-400'
+                          }`}
+                          role="menuitem"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ArrowUpDown className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                            <span>Reorder Habits</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            {isReorderMode ? 'Active' : 'Arrange'}
+                          </span>
+                        </button>
+                      )}
+
                       {/* Theme Toggle */}
                       <button
                         onClick={(e) => { onToggleTheme(e); setIsMobileMenuOpen(false); }}
@@ -440,6 +469,30 @@ export const Header: React.FC<HeaderProps> = ({
                   className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-fade-in divide-y divide-slate-100 dark:divide-slate-800"
                 >
                   <div className="p-1">
+                    {/* Reorder Habits Action */}
+                    {onToggleReorderMode && (
+                      <button
+                        onClick={() => {
+                          setIsDesktopMenuOpen(false);
+                          onToggleReorderMode();
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer transition-colors ${
+                          isReorderMode
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-indigo-600 dark:hover:text-indigo-400'
+                        }`}
+                        role="menuitem"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ArrowUpDown className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                          <span>Reorder Habits</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                          {isReorderMode ? 'Active' : 'Arrange'}
+                        </span>
+                      </button>
+                    )}
+
                     {/* Theme Toggle */}
                     <button
                       onClick={(e) => { onToggleTheme(e); setIsDesktopMenuOpen(false); }}

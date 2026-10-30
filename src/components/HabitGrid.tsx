@@ -4,7 +4,9 @@ import {
   Check,
   CheckCircle2,
   Trash2,
+  Pencil,
   Flame,
+  GripVertical,
   ListChecks,
   Lock,
   Unlock,
@@ -14,6 +16,7 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Habit, HabitCategory } from '../types/habit';
 import { CalendarDay, calculateHabitStreak } from '../utils/dateUtils';
@@ -23,7 +26,11 @@ interface HabitGridProps {
   habits: Habit[];
   days: CalendarDay[];
   onToggleHabit: (habitId: string, dateStr: string) => void;
+  onEditHabit?: (habit: Habit) => void;
   onDeleteHabit: (habitId: string) => void;
+  onReorderHabits?: (reorderedHabits: Habit[]) => void;
+  isReorderMode?: boolean;
+  onExitReorderMode?: () => void;
   categories: HabitCategory[];
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
@@ -40,7 +47,11 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   habits,
   days,
   onToggleHabit,
+  onEditHabit,
   onDeleteHabit,
+  onReorderHabits,
+  isReorderMode: controlledIsReorderMode,
+  onExitReorderMode,
   categories,
   selectedCategory,
   onSelectCategory,
@@ -72,6 +83,69 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
     }
     return 'cards';
   });
+
+  // ── Drag & Drop Habit Reordering State ──
+  const [internalIsReorderMode, setInternalIsReorderMode] = useState<boolean>(false);
+  const isReorderMode = controlledIsReorderMode !== undefined ? controlledIsReorderMode : internalIsReorderMode;
+
+  const handleExitReorderMode = () => {
+    setInternalIsReorderMode(false);
+    onExitReorderMode?.();
+  };
+
+  const [draggedHabitId, setDraggedHabitId] = useState<string | null>(null);
+  const [dragOverHabitId, setDragOverHabitId] = useState<string | null>(null);
+  const [activeHandleId, setActiveHandleId] = useState<string | null>(null);
+
+  const handleMoveHabit = (fromId: string, toId: string) => {
+    if (!onReorderHabits || fromId === toId) return;
+    const fromIdx = habits.findIndex((h) => h.id === fromId);
+    const toIdx = habits.findIndex((h) => h.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const updated = [...habits];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+    onReorderHabits(updated);
+  };
+
+  // Touch handlers for mobile devices (only triggered when pressing the grip handle)
+  const handleTouchStart = (_e: React.TouchEvent, habitId: string) => {
+    setDraggedHabitId(habitId);
+    setDragOverHabitId(habitId);
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate?.(15);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!draggedHabitId) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const card = element?.closest('[data-habit-id]');
+    if (card) {
+      const targetId = card.getAttribute('data-habit-id');
+      if (targetId && targetId !== dragOverHabitId) {
+        setDragOverHabitId(targetId);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggedHabitId && dragOverHabitId && draggedHabitId !== dragOverHabitId) {
+      handleMoveHabit(draggedHabitId, dragOverHabitId);
+    }
+    setDraggedHabitId(null);
+    setDragOverHabitId(null);
+    setActiveHandleId(null);
+  };
+
+  const handleTouchCancel = () => {
+    setDraggedHabitId(null);
+    setDragOverHabitId(null);
+    setActiveHandleId(null);
+  };
 
   // Resolve current effective view
   const effectiveView: HabitViewMode = (() => {
@@ -390,7 +464,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
 
         {/* Mobile Toolbar (< sm) */}
         <div className="flex sm:hidden flex-col gap-2 p-2.5">
-          {/* Scrollable Category Chips Ribbon (Never wraps, no scrollbar!) */}
+          {/* Scrollable Category Chips Ribbon (Never wraps, full width, no scrollbar!) */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar touch-pan-x py-1 px-0.5 select-none scroll-smooth">
             <button
               type="button"
@@ -531,6 +605,33 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 </div>
               </div>
 
+              {/* Reorder Mode Active Banner */}
+              {isReorderMode && onReorderHabits && (
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/90 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-100 shadow-2xs animate-fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold leading-tight truncate">
+                        Rearrange Habits
+                      </p>
+                      <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium leading-tight truncate">
+                        Hold & drag ⠿ to reorder habits
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExitReorderMode}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs cursor-pointer transition-all shrink-0"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Done</span>
+                  </button>
+                </div>
+              )}
+
               {/* Habit Cards */}
               {habits.length === 0 ? (
                 <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-sm">
@@ -555,42 +656,101 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                     return (
                       <div
                         key={`today-card-${habit.id}`}
-                        onClick={() => handleCellClick(habit.id, todayDay, isChecked)}
-                        className={`group relative flex items-center justify-between gap-3 px-3.5 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-300 ease-out cursor-pointer select-none active:scale-[0.99] ${
-                          isChecked
-                            ? 'bg-emerald-50/80 dark:bg-emerald-950/35 border-emerald-300/70 dark:border-emerald-800/60 shadow-xs shadow-emerald-500/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/45 hover:border-emerald-400'
-                            : 'bg-white dark:bg-[#121829] border-slate-200 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 shadow-xs hover:shadow-md'
+                        data-habit-id={habit.id}
+                        draggable={isReorderMode && activeHandleId === habit.id}
+                        onDragStart={(e) => {
+                          if (!isReorderMode) return;
+                          setDraggedHabitId(habit.id);
+                          e.dataTransfer.setData('text/plain', habit.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                          handleMoveHabit(draggedHabitId, habit.id);
+                          setDraggedHabitId(null);
+                          setDragOverHabitId(null);
+                          setActiveHandleId(null);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedHabitId(null);
+                          setDragOverHabitId(null);
+                          setActiveHandleId(null);
+                        }}
+                        onClick={() => {
+                          if (isReorderMode) return;
+                          handleCellClick(habit.id, todayDay, isChecked);
+                        }}
+                        className={`group relative flex items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-200 ease-out select-none ${
+                          isReorderMode
+                            ? 'border-indigo-200/90 dark:border-indigo-800/80 bg-white dark:bg-[#121829] shadow-xs'
+                            : isChecked
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/35 border-emerald-300/70 dark:border-emerald-800/60 shadow-xs shadow-emerald-500/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/45 hover:border-emerald-400 cursor-pointer'
+                            : 'bg-white dark:bg-[#121829] border-slate-200 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 shadow-xs hover:shadow-md cursor-pointer'
+                        } ${
+                          draggedHabitId === habit.id
+                            ? 'opacity-40 scale-[0.98] border-dashed border-indigo-500 shadow-inner'
+                            : dragOverHabitId === habit.id
+                            ? 'border-indigo-500 ring-2 ring-indigo-500/40 scale-[1.01] shadow-md'
+                            : ''
                         }`}
                       >
-                        {/* Left: Checkbox + Emoji + Name & Category */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {/* Circle Checkbox */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCellClick(habit.id, todayDay, isChecked);
-                            }}
-                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
-                              isChecked
-                                ? 'scale-105'
-                                : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400'
-                            }`}
-                            style={
-                              isChecked
-                                ? {
-                                    backgroundColor: habit.color,
-                                    boxShadow: `0 0 0 3px ${habit.color}25, 0 2px 10px ${habit.color}40`,
-                                  }
-                                : undefined
-                            }
-                            title={isChecked ? 'Mark pending' : 'Mark completed'}
-                            aria-label={`Toggle habit ${habit.name}`}
-                          >
-                            {isChecked && (
-                              <Check className="w-4 h-4 text-white stroke-[3.5] animate-check-pop" />
-                            )}
-                          </button>
+                        {/* Left: Reorder Handle (when in Reorder Mode) OR Circle Checkbox (Normal) + Icon + Name */}
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                          {isReorderMode && onReorderHabits ? (
+                            /* ── REORDER CONTROLS: Only Clean Drag Handle ── */
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              title="Hold & drag to reorder"
+                              aria-label={`Reorder ${habit.name}`}
+                              style={{ touchAction: 'none' }}
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={() => setActiveHandleId(habit.id)}
+                              onMouseUp={() => setActiveHandleId(null)}
+                              onTouchStart={(e) => handleTouchStart(e, habit.id)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              onTouchCancel={handleTouchCancel}
+                              className="touch-none cursor-grab active:cursor-grabbing w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 select-none border border-slate-200/90 dark:border-slate-700/90"
+                            >
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                          ) : (
+                            /* ── NORMAL MODE: Circle Checkbox ── */
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCellClick(habit.id, todayDay, isChecked);
+                              }}
+                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 cursor-pointer ${
+                                isChecked
+                                  ? 'scale-105'
+                                  : 'border-2 border-slate-300 dark:border-slate-600 hover:border-emerald-500 dark:hover:border-emerald-400'
+                              }`}
+                              style={
+                                isChecked
+                                  ? {
+                                      backgroundColor: habit.color,
+                                      boxShadow: `0 0 0 3px ${habit.color}25, 0 2px 10px ${habit.color}40`,
+                                    }
+                                  : undefined
+                              }
+                              title={isChecked ? 'Mark pending' : 'Mark completed'}
+                              aria-label={`Toggle habit ${habit.name}`}
+                            >
+                              {isChecked && (
+                                <Check className="w-4 h-4 text-white stroke-[3.5] animate-check-pop" />
+                              )}
+                            </button>
+                          )}
 
                           {/* Habit Icon in squircle */}
                           <div
@@ -636,13 +796,29 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                           </div>
                         </div>
 
-                        {/* Right: Streak & Delete Action */}
-                        <div className="flex items-center gap-2 shrink-0">
+                        {/* Right: Streak & Actions (Edit + Delete) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {streak.current > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
                               <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                               <span>{streak.current}d</span>
                             </span>
+                          )}
+
+                          {/* Edit habit action */}
+                          {onEditHabit && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditHabit(habit);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 active:scale-90 transition-all cursor-pointer"
+                              title={`Edit "${habit.name}"`}
+                              aria-label="Edit habit"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
                           )}
 
                           {/* Delete habit action */}
@@ -678,6 +854,33 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
             MODE B: MONTHLY TRACKER (STREAK MATRIX CARDS)
         ───────────────────────────────────────────────────────────── */
         <div className="p-3.5 sm:p-5">
+              {/* Reorder Mode Active Banner */}
+              {isReorderMode && onReorderHabits && (
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 mb-3.5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/90 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-100 shadow-2xs animate-fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <ArrowUpDown className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold leading-tight truncate">
+                        Rearrange Habits
+                      </p>
+                      <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium leading-tight truncate">
+                        Hold & drag ⠿ to reorder habits
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExitReorderMode}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs cursor-pointer transition-all shrink-0"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Done</span>
+                  </button>
+                </div>
+              )}
+
               {habits.length === 0 ? (
                 <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-sm">
                   <p className="font-semibold text-slate-700 dark:text-slate-300 mb-1">No habits found</p>
@@ -706,11 +909,68 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       return (
                         <div
                           key={`matrix-card-${habit.id}`}
-                          className="bg-white dark:bg-[#121829] rounded-2xl border border-slate-200/90 dark:border-slate-800/90 p-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700/80 transition-all space-y-3"
+                          data-habit-id={habit.id}
+                          draggable={isReorderMode && activeHandleId === habit.id}
+                          onDragStart={(e) => {
+                            if (!isReorderMode) return;
+                            setDraggedHabitId(habit.id);
+                            e.dataTransfer.setData('text/plain', habit.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
+                          onDragOver={(e) => {
+                            if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                            handleMoveHabit(draggedHabitId, habit.id);
+                            setDraggedHabitId(null);
+                            setDragOverHabitId(null);
+                            setActiveHandleId(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedHabitId(null);
+                            setDragOverHabitId(null);
+                            setActiveHandleId(null);
+                          }}
+                          className={`bg-white dark:bg-[#121829] rounded-2xl border p-4 shadow-xs transition-all space-y-3 ${
+                            isReorderMode
+                              ? 'border-indigo-200/90 dark:border-indigo-800/80 shadow-xs'
+                              : 'border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700/80'
+                          } ${
+                            draggedHabitId === habit.id
+                              ? 'opacity-40 scale-[0.98] border-dashed border-indigo-500 shadow-inner'
+                              : dragOverHabitId === habit.id
+                              ? 'border-indigo-500 ring-2 ring-indigo-500/40 scale-[1.01] shadow-md'
+                              : ''
+                          }`}
                         >
-                          {/* Card Header: Icon, Name, Category, Streak & Delete */}
+                          {/* Card Header: Reorder Handle (in Reorder Mode), Icon, Name, Category, Streak & Actions */}
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {/* Reorder Drag Handle only visible in Reorder Mode */}
+                              {isReorderMode && onReorderHabits && (
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  title="Hold & drag to reorder"
+                                  aria-label={`Reorder ${habit.name}`}
+                                  style={{ touchAction: 'none' }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={() => setActiveHandleId(habit.id)}
+                                  onMouseUp={() => setActiveHandleId(null)}
+                                  onTouchStart={(e) => handleTouchStart(e, habit.id)}
+                                  onTouchMove={handleTouchMove}
+                                  onTouchEnd={handleTouchEnd}
+                                  onTouchCancel={handleTouchCancel}
+                                  className="touch-none cursor-grab active:cursor-grabbing p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 select-none border border-slate-200/80 dark:border-slate-700/80"
+                                >
+                                  <GripVertical className="w-3.5 h-3.5" />
+                                </div>
+                              )}
                               <div
                                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
                                 style={{
@@ -741,13 +1001,27 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               </div>
                             </div>
 
-                            {/* Streak & Delete */}
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Streak, Edit & Delete */}
+                            <div className="flex items-center gap-1 shrink-0">
                               {streak.current > 0 && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60 shadow-2xs">
                                   <Flame className="w-3 h-3 fill-amber-500 text-amber-500" />
                                   <span>{streak.current}d</span>
                                 </span>
+                              )}
+                              {onEditHabit && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditHabit(habit);
+                                  }}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 active:scale-90 transition-all cursor-pointer"
+                                  title={`Edit "${habit.name}"`}
+                                  aria-label="Edit habit"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
                               )}
                               <button
                                 type="button"
@@ -903,7 +1177,34 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
         /* ─────────────────────────────────────────────────────────────
             MODE C: FULL SPREADSHEET TABLE VIEW
         ───────────────────────────────────────────────────────────── */
-        <div className="relative group/table">
+        <div className="relative group/table space-y-2.5">
+          {/* Reorder Mode Active Banner */}
+          {isReorderMode && onReorderHabits && (
+            <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/90 dark:border-indigo-800/80 text-indigo-950 dark:text-indigo-100 shadow-2xs animate-fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold leading-tight truncate">
+                    Rearrange Habits
+                  </p>
+                  <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium leading-tight truncate">
+                    Hold & drag ⠿ to reorder habits
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExitReorderMode}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-xs cursor-pointer transition-all shrink-0"
+              >
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Done</span>
+              </button>
+            </div>
+          )}
+
           <div
             ref={tableContainerRef}
             onScroll={updateTableScrollMetrics}
@@ -987,14 +1288,14 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                 ))}
 
                 {/* Monthly Stats Columns (Pinned Right on sm+ screens) */}
-                <th className="sm:sticky sm:right-[112px] sm:z-20 px-3 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
+                <th className="sm:sticky sm:right-[134px] sm:z-20 px-3 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)]">
                   Progress
                 </th>
-                <th className="sm:sticky sm:right-[46px] sm:z-20 px-2 py-2 text-center w-[66px] min-w-[66px] max-w-[66px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
+                <th className="sm:sticky sm:right-[68px] sm:z-20 px-2 py-2 text-center w-[66px] min-w-[66px] max-w-[66px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
                   Streak
                 </th>
-                <th className="sm:sticky sm:right-0 sm:z-20 px-2 py-2 text-center w-[46px] min-w-[46px] max-w-[46px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
-                  Action
+                <th className="sm:sticky sm:right-0 sm:z-20 px-1 py-2 text-center w-[68px] min-w-[68px] max-w-[68px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 border-l border-slate-200/80 dark:border-slate-800">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1020,7 +1321,40 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                   return (
                     <tr
                       key={habit.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group"
+                      data-habit-id={habit.id}
+                      draggable={isReorderMode && activeHandleId === habit.id}
+                      onDragStart={(e) => {
+                        if (!isReorderMode) return;
+                        setDraggedHabitId(habit.id);
+                        e.dataTransfer.setData('text/plain', habit.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
+                        handleMoveHabit(draggedHabitId, habit.id);
+                        setDraggedHabitId(null);
+                        setDragOverHabitId(null);
+                        setActiveHandleId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedHabitId(null);
+                        setDragOverHabitId(null);
+                        setActiveHandleId(null);
+                      }}
+                      className={`transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group ${
+                        draggedHabitId === habit.id
+                          ? 'opacity-40 bg-indigo-50/50 dark:bg-indigo-950/30'
+                          : dragOverHabitId === habit.id
+                          ? 'bg-indigo-100/60 dark:bg-indigo-900/40 ring-1 ring-inset ring-indigo-500'
+                          : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                      }`}
                     >
                       {/* Sticky Habit Label Cell */}
                       <td className={`sticky left-0 z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 sm:px-3 py-2 w-[210px] min-w-[210px] max-w-[210px] sm:w-auto sm:min-w-[270px] sm:max-w-none transition-all duration-150 ease-in-out ${
@@ -1028,10 +1362,31 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                           ? 'shadow-[3px_0_8px_-2px_rgba(0,0,0,0.12)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.6)]'
                           : 'shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]'
                       }`}>
-                        <div className="flex items-center space-x-2 sm:space-x-2.5">
-                          <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] w-3.5 text-right font-medium hidden sm:inline-block">
-                            {rowIndex + 1}
-                          </span>
+                        <div className="flex items-center space-x-1.5 sm:space-x-2">
+                          {/* Reorder Drag Handle only visible in Reorder Mode */}
+                          {isReorderMode && onReorderHabits ? (
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              title="Hold & drag to reorder"
+                              aria-label={`Reorder ${habit.name}`}
+                              style={{ touchAction: 'none' }}
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={() => setActiveHandleId(habit.id)}
+                              onMouseUp={() => setActiveHandleId(null)}
+                              onTouchStart={(e) => handleTouchStart(e, habit.id)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              onTouchCancel={handleTouchCancel}
+                              className="touch-none cursor-grab active:cursor-grabbing text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-md bg-slate-100 dark:bg-slate-800 transition-colors shrink-0 select-none border border-slate-200/80 dark:border-slate-700/80"
+                            >
+                              <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 font-mono text-[10px] w-3 text-right font-medium hidden sm:inline-block">
+                              {rowIndex + 1}
+                            </span>
+                          )}
                           <div
                             className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
                             style={{ backgroundColor: `${habit.color}15`, border: `1px solid ${habit.color}40` }}
@@ -1134,7 +1489,7 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       })}
 
                       {/* Monthly Progress Cell */}
-                      <td className="sm:sticky sm:right-[112px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2.5 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
+                      <td className="sm:sticky sm:right-[134px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2.5 py-2 text-center w-[92px] min-w-[92px] max-w-[92px] border-l border-slate-200/80 dark:border-slate-800 sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.06)] dark:sm:shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.5)] transition-colors duration-150 ease-in-out">
                         <div className="flex flex-col items-center">
                           <div className="flex items-center justify-between w-full text-[11px] font-mono font-bold text-slate-800 dark:text-slate-200">
                             <span>{completedDaysInMonth}/{target}</span>
@@ -1153,27 +1508,45 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       </td>
 
                       {/* Streak Count Cell */}
-                      <td className="sm:sticky sm:right-[46px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 py-2 text-center font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
+                      <td className="sm:sticky sm:right-[68px] sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 py-2 text-center font-mono w-[66px] min-w-[66px] max-w-[66px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
                         <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/70 dark:border-amber-700/60 shadow-2xs">
                           <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
                           <span>{streak.current}</span>
                         </div>
                       </td>
 
-                      {/* Action Cell */}
-                      <td className="sm:sticky sm:right-0 sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-2 py-2 text-center w-[46px] min-w-[46px] max-w-[46px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete habit "${habit.name}"?`)) {
-                              onDeleteHabit(habit.id);
-                            }
-                          }}
-                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all duration-150 cursor-pointer"
-                          title="Delete habit"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      {/* Action Cell (Edit + Delete) */}
+                      <td className="sm:sticky sm:right-0 sm:z-10 bg-white dark:bg-[#0f1422] group-hover:bg-slate-50 dark:group-hover:bg-[#182032] px-1 py-2 text-center w-[68px] min-w-[68px] max-w-[68px] border-l border-slate-200/80 dark:border-slate-800 transition-colors duration-150 ease-in-out">
+                        <div className="flex items-center justify-center gap-0.5">
+                          {onEditHabit && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditHabit(habit);
+                              }}
+                              className="p-1 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 active:scale-90 transition-all duration-150 cursor-pointer"
+                              title={`Edit "${habit.name}"`}
+                              aria-label="Edit habit"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete habit "${habit.name}"?`)) {
+                                onDeleteHabit(habit.id);
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 active:scale-90 transition-all duration-150 cursor-pointer"
+                            title="Delete habit"
+                            aria-label="Delete habit"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1215,13 +1588,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       </td>
                     ))}
 
-                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-700 dark:text-slate-300 font-mono text-xs border-l border-slate-200/80 dark:border-slate-800">
+                    <td className="sm:sticky sm:right-[134px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-700 dark:text-slate-300 font-mono text-xs border-l border-slate-200/80 dark:border-slate-800">
                       Total
                     </td>
-                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-500 dark:text-slate-400 text-xs border-l border-slate-200/80 dark:border-slate-800">
+                    <td className="sm:sticky sm:right-[68px] sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 text-center text-slate-500 dark:text-slate-400 text-xs border-l border-slate-200/80 dark:border-slate-800">
                       —
                     </td>
-                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 border-l border-slate-200/80 dark:border-slate-800" />
+                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-100 dark:bg-slate-900 px-2 py-2 border-l border-slate-200/80 dark:border-slate-800 w-[68px] min-w-[68px] max-w-[68px]" />
                   </tr>
 
                   {/* Daily Success % Row */}
@@ -1256,13 +1629,13 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       </td>
                     ))}
 
-                    <td className="sm:sticky sm:right-[112px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400 font-mono border-l border-slate-200/80 dark:border-slate-800">
+                    <td className="sm:sticky sm:right-[134px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400 font-mono border-l border-slate-200/80 dark:border-slate-800">
                       Avg
                     </td>
-                    <td className="sm:sticky sm:right-[46px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-400 border-l border-slate-200/80 dark:border-slate-800">
+                    <td className="sm:sticky sm:right-[68px] sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-center text-slate-400 border-l border-slate-200/80 dark:border-slate-800">
                       —
                     </td>
-                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 border-l border-slate-200/80 dark:border-slate-800" />
+                    <td className="sm:sticky sm:right-0 sm:z-10 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 border-l border-slate-200/80 dark:border-slate-800 w-[68px] min-w-[68px] max-w-[68px]" />
                   </tr>
                 </>
               )}
@@ -1286,12 +1659,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
         {canScrollTableRight && (
           <>
             {/* Subtle Right Edge Fade Hint (tells user more days exist to the right) */}
-            <div className="pointer-events-none absolute top-0 bottom-0 right-0 sm:right-[204px] w-6 bg-gradient-to-l from-slate-400/15 dark:from-black/40 to-transparent z-15 transition-opacity duration-200" />
+            <div className="pointer-events-none absolute top-0 bottom-0 right-0 sm:right-[226px] w-6 bg-gradient-to-l from-slate-400/15 dark:from-black/40 to-transparent z-15 transition-opacity duration-200" />
 
             <button
               type="button"
               onClick={() => scrollTableByDays(7)}
-              className="hidden sm:flex absolute right-2 sm:right-[212px] top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full items-center justify-center bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-md border border-slate-200/90 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-700 dark:hover:text-emerald-400 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/table:opacity-100 cursor-pointer backdrop-blur-xs"
+              className="hidden sm:flex absolute right-2 sm:right-[234px] top-1/2 -translate-y-1/2 z-30 w-8 h-8 rounded-full items-center justify-center bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 shadow-md border border-slate-200/90 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-slate-700 dark:hover:text-emerald-400 hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/table:opacity-100 cursor-pointer backdrop-blur-xs"
               title="Scroll 1 week forward"
               aria-label="Scroll 1 week forward"
             >
