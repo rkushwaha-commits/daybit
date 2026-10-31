@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Habit, HabitCategory, MonthSummary } from './types/habit';
 import { getDefaultHabits } from './data/initialHabits';
 import { getDaysForMonth, getMonthName, calculateHabitStreak } from './utils/dateUtils';
@@ -519,6 +519,8 @@ export default function App() {
     }
   };
 
+  const reorderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleReorderHabits = (reorderedHabits: Habit[]) => {
     let newMasterHabits: Habit[];
     if (selectedCategory === 'all') {
@@ -539,10 +541,15 @@ export default function App() {
       console.warn('Failed to save reordered habits to localStorage:', e);
     }
     if (user) {
+      if (reorderSyncTimeoutRef.current) {
+        clearTimeout(reorderSyncTimeoutRef.current);
+      }
       setIsSyncing(true);
-      upsertAllCloudHabits(user.id, newMasterHabits)
-        .catch((err) => console.error('[Daybit Sync] Reorder sync failed:', err))
-        .finally(() => setIsSyncing(false));
+      reorderSyncTimeoutRef.current = setTimeout(() => {
+        upsertAllCloudHabits(user.id, newMasterHabits)
+          .catch((err) => console.error('[Daybit Sync] Reorder sync failed:', err))
+          .finally(() => setIsSyncing(false));
+      }, 500);
     }
   };
 

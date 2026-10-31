@@ -94,57 +94,115 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
   };
 
   const [draggedHabitId, setDraggedHabitId] = useState<string | null>(null);
-  const [dragOverHabitId, setDragOverHabitId] = useState<string | null>(null);
-  const [activeHandleId, setActiveHandleId] = useState<string | null>(null);
+
+  // Synchronous refs to prevent stale closures during rapid drag movements
+  const draggedHabitIdRef = useRef<string | null>(null);
+  const habitsRef = useRef(habits);
+  habitsRef.current = habits;
+  const onReorderHabitsRef = useRef(onReorderHabits);
+  onReorderHabitsRef.current = onReorderHabits;
+  const cleanupPointerListenersRef = useRef<(() => void) | null>(null);
 
   const handleMoveHabit = (fromId: string, toId: string) => {
-    if (!onReorderHabits || fromId === toId) return;
-    const fromIdx = habits.findIndex((h) => h.id === fromId);
-    const toIdx = habits.findIndex((h) => h.id === toId);
+    const currentHabits = habitsRef.current;
+    const reorderFn = onReorderHabitsRef.current;
+    if (!reorderFn || fromId === toId) return;
+    const fromIdx = currentHabits.findIndex((h) => h.id === fromId);
+    const toIdx = currentHabits.findIndex((h) => h.id === toId);
     if (fromIdx === -1 || toIdx === -1) return;
 
-    const updated = [...habits];
+    const updated = [...currentHabits];
     const [moved] = updated.splice(fromIdx, 1);
     updated.splice(toIdx, 0, moved);
-    onReorderHabits(updated);
+    habitsRef.current = updated;
+    reorderFn(updated);
   };
 
-  // Touch handlers for mobile devices (only triggered when pressing the grip handle)
-  const handleTouchStart = (_e: React.TouchEvent, habitId: string) => {
+  // Clean up any lingering pointer listeners on unmount
+  useEffect(() => {
+    return () => {
+      cleanupPointerListenersRef.current?.();
+    };
+  }, []);
+
+  // Unified Pointer Drag Handler for mobile touchscreen, tablets, and desktop mouse
+  const handlePointerDown = (e: React.PointerEvent, habitId: string) => {
+    // Only primary mouse button or touch/pen
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.stopPropagation();
+
+    // Clean up any previous listener if uncleaned
+    cleanupPointerListenersRef.current?.();
+
+    draggedHabitIdRef.current = habitId;
     setDraggedHabitId(habitId);
-    setDragOverHabitId(habitId);
+
+    // Initial haptic feedback on pick-up
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate?.(15);
+      navigator.vibrate?.(25);
     }
-  };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!draggedHabitId) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    const card = element?.closest('[data-habit-id]');
-    if (card) {
-      const targetId = card.getAttribute('data-habit-id');
-      if (targetId && targetId !== dragOverHabitId) {
-        setDragOverHabitId(targetId);
+    const onWindowPointerMove = (moveEvent: PointerEvent) => {
+      const currentDraggedId = draggedHabitIdRef.current;
+      if (!currentDraggedId) return;
+
+      // Prevent native browser scrolling/pull-to-refresh while dragging a habit card
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
       }
-    }
-  };
 
-  const handleTouchEnd = () => {
-    if (draggedHabitId && dragOverHabitId && draggedHabitId !== dragOverHabitId) {
-      handleMoveHabit(draggedHabitId, dragOverHabitId);
-    }
-    setDraggedHabitId(null);
-    setDragOverHabitId(null);
-    setActiveHandleId(null);
-  };
+      const currentY = moveEvent.clientY;
+      const currentX = moveEvent.clientX;
 
-  const handleTouchCancel = () => {
-    setDraggedHabitId(null);
-    setDragOverHabitId(null);
-    setActiveHandleId(null);
+      // Auto-scroll window if dragging near top or bottom of viewport
+      if (currentY > window.innerHeight - 70) {
+        window.scrollBy({ top: 8, behavior: 'auto' });
+      } else if (currentY < 70) {
+        window.scrollBy({ top: -8, behavior: 'auto' });
+      }
+
+      // Query all rendered habit cards
+      const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-habit-id]'));
+      for (const card of cards) {
+        const targetId = card.getAttribute('data-habit-id');
+        if (!targetId || targetId === currentDraggedId) continue;
+
+        const rect = card.getBoundingClientRect();
+        // Check if pointer is vertically within this card's slot, with generous horizontal margin
+        const inY = currentY >= rect.top && currentY <= rect.bottom;
+        const inX = currentX >= rect.left - 50 && currentX <= rect.right + 50;
+
+        if (inY && inX) {
+          handleMoveHabit(currentDraggedId, targetId);
+          // Haptic click tick on each slot shuffle
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate?.(12);
+          }
+          break;
+        }
+      }
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('pointermove', onWindowPointerMove);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerUp);
+      cleanupPointerListenersRef.current = null;
+
+      draggedHabitIdRef.current = null;
+      setDraggedHabitId(null);
+    };
+
+    const onWindowPointerUp = () => {
+      cleanup();
+    };
+
+    cleanupPointerListenersRef.current = cleanup;
+
+    // Use passive: false so we can cancel scroll gestures with moveEvent.preventDefault()
+    window.addEventListener('pointermove', onWindowPointerMove, { passive: false });
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerUp);
   };
 
   // Resolve current effective view
@@ -657,48 +715,18 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                       <div
                         key={`today-card-${habit.id}`}
                         data-habit-id={habit.id}
-                        draggable={isReorderMode && activeHandleId === habit.id}
-                        onDragStart={(e) => {
-                          if (!isReorderMode) return;
-                          setDraggedHabitId(habit.id);
-                          e.dataTransfer.setData('text/plain', habit.id);
-                          e.dataTransfer.effectAllowed = 'move';
-                        }}
-                        onDragOver={(e) => {
-                          if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                          if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                          handleMoveHabit(draggedHabitId, habit.id);
-                          setDraggedHabitId(null);
-                          setDragOverHabitId(null);
-                          setActiveHandleId(null);
-                        }}
-                        onDragEnd={() => {
-                          setDraggedHabitId(null);
-                          setDragOverHabitId(null);
-                          setActiveHandleId(null);
-                        }}
                         onClick={() => {
                           if (isReorderMode) return;
                           handleCellClick(habit.id, todayDay, isChecked);
                         }}
-                        className={`group relative flex items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-3.5 rounded-2xl border transition-all duration-200 ease-out select-none ${
+                        className={`group relative flex items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-3.5 rounded-2xl border select-none transition-all duration-200 ease-out ${
                           isReorderMode
-                            ? 'border-indigo-200/90 dark:border-indigo-800/80 bg-white dark:bg-[#121829] shadow-xs'
+                            ? draggedHabitId === habit.id
+                              ? 'scale-[1.03] shadow-xl border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/80 ring-2 ring-indigo-500/50 z-20 transition-transform duration-100'
+                              : 'border-indigo-200/90 dark:border-indigo-800/80 bg-white dark:bg-[#121829] shadow-xs'
                             : isChecked
                             ? 'bg-emerald-50/80 dark:bg-emerald-950/35 border-emerald-300/70 dark:border-emerald-800/60 shadow-xs shadow-emerald-500/5 hover:bg-emerald-50 dark:hover:bg-emerald-950/45 hover:border-emerald-400 cursor-pointer'
                             : 'bg-white dark:bg-[#121829] border-slate-200 dark:border-slate-800/90 hover:border-emerald-500/40 dark:hover:border-emerald-500/40 shadow-xs hover:shadow-md cursor-pointer'
-                        } ${
-                          draggedHabitId === habit.id
-                            ? 'opacity-40 scale-[0.98] border-dashed border-indigo-500 shadow-inner'
-                            : dragOverHabitId === habit.id
-                            ? 'border-indigo-500 ring-2 ring-indigo-500/40 scale-[1.01] shadow-md'
-                            : ''
                         }`}
                       >
                         {/* Left: Reorder Handle (when in Reorder Mode) OR Circle Checkbox (Normal) + Icon + Name */}
@@ -712,13 +740,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               aria-label={`Reorder ${habit.name}`}
                               style={{ touchAction: 'none' }}
                               onClick={(e) => e.stopPropagation()}
-                              onMouseDown={() => setActiveHandleId(habit.id)}
-                              onMouseUp={() => setActiveHandleId(null)}
-                              onTouchStart={(e) => handleTouchStart(e, habit.id)}
-                              onTouchMove={handleTouchMove}
-                              onTouchEnd={handleTouchEnd}
-                              onTouchCancel={handleTouchCancel}
-                              className="touch-none cursor-grab active:cursor-grabbing w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 select-none border border-slate-200/90 dark:border-slate-700/90"
+                              onPointerDown={(e) => handlePointerDown(e, habit.id)}
+                              className={`touch-none cursor-grab active:cursor-grabbing w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all shrink-0 select-none ${
+                                draggedHabitId === habit.id
+                                  ? 'bg-indigo-600 text-white shadow-md scale-110'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/90 dark:border-slate-700/90'
+                              }`}
                             >
                               <GripVertical className="w-4 h-4" />
                             </div>
@@ -910,42 +937,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                         <div
                           key={`matrix-card-${habit.id}`}
                           data-habit-id={habit.id}
-                          draggable={isReorderMode && activeHandleId === habit.id}
-                          onDragStart={(e) => {
-                            if (!isReorderMode) return;
-                            setDraggedHabitId(habit.id);
-                            e.dataTransfer.setData('text/plain', habit.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                          onDragOver={(e) => {
-                            if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                            e.preventDefault();
-                            e.dataTransfer.dropEffect = 'move';
-                            if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                            handleMoveHabit(draggedHabitId, habit.id);
-                            setDraggedHabitId(null);
-                            setDragOverHabitId(null);
-                            setActiveHandleId(null);
-                          }}
-                          onDragEnd={() => {
-                            setDraggedHabitId(null);
-                            setDragOverHabitId(null);
-                            setActiveHandleId(null);
-                          }}
-                          className={`bg-white dark:bg-[#121829] rounded-2xl border p-4 shadow-xs transition-all space-y-3 ${
+                          className={`rounded-2xl border p-4 shadow-xs select-none transition-all duration-200 ease-out space-y-3 ${
                             isReorderMode
-                              ? 'border-indigo-200/90 dark:border-indigo-800/80 shadow-xs'
-                              : 'border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700/80'
-                          } ${
-                            draggedHabitId === habit.id
-                              ? 'opacity-40 scale-[0.98] border-dashed border-indigo-500 shadow-inner'
-                              : dragOverHabitId === habit.id
-                              ? 'border-indigo-500 ring-2 ring-indigo-500/40 scale-[1.01] shadow-md'
-                              : ''
+                              ? draggedHabitId === habit.id
+                                ? 'scale-[1.03] shadow-xl border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/80 ring-2 ring-indigo-500/50 z-20 transition-transform duration-100'
+                                : 'border-indigo-200/90 dark:border-indigo-800/80 bg-white dark:bg-[#121829] shadow-xs'
+                              : 'border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700/80 bg-white dark:bg-[#121829]'
                           }`}
                         >
                           {/* Card Header: Reorder Handle (in Reorder Mode), Icon, Name, Category, Streak & Actions */}
@@ -960,13 +957,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                                   aria-label={`Reorder ${habit.name}`}
                                   style={{ touchAction: 'none' }}
                                   onClick={(e) => e.stopPropagation()}
-                                  onMouseDown={() => setActiveHandleId(habit.id)}
-                                  onMouseUp={() => setActiveHandleId(null)}
-                                  onTouchStart={(e) => handleTouchStart(e, habit.id)}
-                                  onTouchMove={handleTouchMove}
-                                  onTouchEnd={handleTouchEnd}
-                                  onTouchCancel={handleTouchCancel}
-                                  className="touch-none cursor-grab active:cursor-grabbing p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 select-none border border-slate-200/80 dark:border-slate-700/80"
+                                  onPointerDown={(e) => handlePointerDown(e, habit.id)}
+                                  className={`touch-none cursor-grab active:cursor-grabbing p-1.5 rounded-lg transition-all shrink-0 select-none ${
+                                    draggedHabitId === habit.id
+                                      ? 'bg-indigo-600 text-white shadow-md scale-110'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80'
+                                  }`}
                                 >
                                   <GripVertical className="w-3.5 h-3.5" />
                                 </div>
@@ -1322,37 +1318,9 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                     <tr
                       key={habit.id}
                       data-habit-id={habit.id}
-                      draggable={isReorderMode && activeHandleId === habit.id}
-                      onDragStart={(e) => {
-                        if (!isReorderMode) return;
-                        setDraggedHabitId(habit.id);
-                        e.dataTransfer.setData('text/plain', habit.id);
-                        e.dataTransfer.effectAllowed = 'move';
-                      }}
-                      onDragOver={(e) => {
-                        if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        if (dragOverHabitId !== habit.id) setDragOverHabitId(habit.id);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (!isReorderMode || !draggedHabitId || draggedHabitId === habit.id) return;
-                        handleMoveHabit(draggedHabitId, habit.id);
-                        setDraggedHabitId(null);
-                        setDragOverHabitId(null);
-                        setActiveHandleId(null);
-                      }}
-                      onDragEnd={() => {
-                        setDraggedHabitId(null);
-                        setDragOverHabitId(null);
-                        setActiveHandleId(null);
-                      }}
-                      className={`transition-colors duration-150 ease-in-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group ${
+                      className={`transition-all duration-200 ease-out divide-x divide-slate-200/70 dark:divide-slate-800/80 group ${
                         draggedHabitId === habit.id
-                          ? 'opacity-40 bg-indigo-50/50 dark:bg-indigo-950/30'
-                          : dragOverHabitId === habit.id
-                          ? 'bg-indigo-100/60 dark:bg-indigo-900/40 ring-1 ring-inset ring-indigo-500'
+                          ? 'bg-indigo-100/90 dark:bg-indigo-950/80 shadow-md ring-2 ring-indigo-500/40 z-20'
                           : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
                       }`}
                     >
@@ -1372,13 +1340,12 @@ export const HabitGrid: React.FC<HabitGridProps> = ({
                               aria-label={`Reorder ${habit.name}`}
                               style={{ touchAction: 'none' }}
                               onClick={(e) => e.stopPropagation()}
-                              onMouseDown={() => setActiveHandleId(habit.id)}
-                              onMouseUp={() => setActiveHandleId(null)}
-                              onTouchStart={(e) => handleTouchStart(e, habit.id)}
-                              onTouchMove={handleTouchMove}
-                              onTouchEnd={handleTouchEnd}
-                              onTouchCancel={handleTouchCancel}
-                              className="touch-none cursor-grab active:cursor-grabbing text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-md bg-slate-100 dark:bg-slate-800 transition-colors shrink-0 select-none border border-slate-200/80 dark:border-slate-700/80"
+                              onPointerDown={(e) => handlePointerDown(e, habit.id)}
+                              className={`touch-none cursor-grab active:cursor-grabbing p-1 rounded-md transition-all shrink-0 select-none ${
+                                draggedHabitId === habit.id
+                                  ? 'bg-indigo-600 text-white shadow-sm scale-110'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200/80 dark:border-slate-700/80'
+                              }`}
                             >
                               <GripVertical className="w-3.5 h-3.5" />
                             </div>
